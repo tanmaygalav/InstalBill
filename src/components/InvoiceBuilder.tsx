@@ -1,4 +1,5 @@
 "use client";
+import toast from "react-hot-toast";
 import { supabase } from "@/lib/supabase"; // <-- NEW
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -59,19 +60,18 @@ const generateLink = async () => {
 
     if (error) throw error;
 
-    // 1. Construct the full public URL
     const publicUrl = `${window.location.origin}/invoice/${data[0].id}`;
-    
-    // 2. Copy the URL to the user's clipboard automatically
     await navigator.clipboard.writeText(publicUrl);
 
-    // 3. Let them know, then immediately redirect them to the page
-    alert("Success! Payment link copied to your clipboard.");
+    // REPLACED ALERT WITH TOAST
+    toast.success("Payment link copied to clipboard!");
+    
     router.push(`/invoice/${data[0].id}`);
 
   } catch (error) {
     console.error("Error saving to database:", error);
-    alert("Failed to connect to database. Check the console.");
+    // REPLACED ALERT WITH TOAST
+    toast.error("Failed to generate link.");
   } finally {
     setIsGenerating(false);
   }
