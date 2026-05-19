@@ -8,8 +8,8 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className="bg-gray-50 text-gray-900 antialiased">
-        {/* The Toaster handles the smooth popups globally */}
+      {/* Changed to a sophisticated warm cream background with charcoal text */}
+      <body className="bg-[#FEF9F2] text-[#111827] antialiased selection:bg-indigo-100">
         <Toaster position="bottom-center" />
         {children}
       </body>
