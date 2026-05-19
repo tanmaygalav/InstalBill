@@ -1,5 +1,6 @@
 "use client";
 import { supabase } from "@/lib/supabase"; // <-- NEW
+import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Receipt, Send, FileText, Plus, Trash2 } from "lucide-react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"; // <-- NEW IMPORT
@@ -10,6 +11,8 @@ export default function InvoiceBuilder() {
     clientEmail: "",
     upiId: "",
   });
+
+  const router = useRouter();
 
   const [items, setItems] = useState([{ id: 1, description: "", amount: "" }]);
   const [isGenerating, setIsGenerating] = useState(false); // <-- NEW
@@ -40,7 +43,6 @@ export default function InvoiceBuilder() {
   // --- NEW: DATABASE INSERTION ENGINE ---
 const generateLink = async () => {
   setIsGenerating(true);
-  
   try {
     const { data, error } = await supabase
       .from('invoices')
@@ -50,15 +52,22 @@ const generateLink = async () => {
           client_email: invoiceData.clientEmail || "Unknown",
           upi_id: invoiceData.upiId || "Unknown",
           total_amount: totalAmount,
-          items: items, // Saves the whole array as JSON automatically!
+          items: items,
         }
       ])
-      .select(); // Tells Supabase to return the newly created row data
+      .select();
 
     if (error) throw error;
 
-    alert(`Success! Invoice saved to database with ID: \n${data[0].id}`);
-    console.log("Supabase Response:", data[0]);
+    // 1. Construct the full public URL
+    const publicUrl = `${window.location.origin}/invoice/${data[0].id}`;
+    
+    // 2. Copy the URL to the user's clipboard automatically
+    await navigator.clipboard.writeText(publicUrl);
+
+    // 3. Let them know, then immediately redirect them to the page
+    alert("Success! Payment link copied to your clipboard.");
+    router.push(`/invoice/${data[0].id}`);
 
   } catch (error) {
     console.error("Error saving to database:", error);
