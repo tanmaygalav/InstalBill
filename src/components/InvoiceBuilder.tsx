@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Receipt, Send, FileText, Plus, Trash2 } from "lucide-react";
+import { PDFDocument, rgb, StandardFonts } from "pdf-lib"; // <-- NEW IMPORT
 
 export default function InvoiceBuilder() {
   const [invoiceData, setInvoiceData] = useState({
@@ -10,15 +11,12 @@ export default function InvoiceBuilder() {
     upiId: "",
   });
 
-  // 1. New State for Line Items
   const [items, setItems] = useState([{ id: 1, description: "", amount: "" }]);
 
-  // 2. Helper to handle main form inputs
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInvoiceData({ ...invoiceData, [e.target.name]: e.target.value });
   };
 
-  // 3. Helpers for dynamic items
   const handleItemChange = (id: number, field: string, value: string) => {
     setItems(items.map(item => item.id === id ? { ...item, [field]: value } : item));
   };
@@ -33,8 +31,63 @@ export default function InvoiceBuilder() {
     }
   };
 
-  // 4. Calculate Total automatically
   const totalAmount = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+  // --- NEW: PDF GENERATION ENGINE ---
+  const generatePDF = async () => {
+    // 1. Create a new document and set fonts
+    const pdfDoc = await PDFDocument.create();
+    const font = await pdfDoc.embedFont(StandardFonts.Helvetica);
+    const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold);
+    
+    // 2. Add a standard A4 Page
+    const page = pdfDoc.addPage([595.28, 841.89]); 
+    const { width, height } = page.getSize();
+    let y = height - 80; // Start near the top
+
+    // 3. Draw Header
+    page.drawText("INVOICE", { x: 50, y, size: 28, font: boldFont, color: rgb(0.7, 0.7, 0.7) });
+    page.drawText(invoiceData.senderName || "Your Business", { x: width - 200, y, size: 14, font: boldFont });
+    y -= 20;
+    page.drawText(`Date: ${new Date().toLocaleDateString()}`, { x: 50, y, size: 10, font });
+    page.drawText(invoiceData.upiId || "UPI ID Pending", { x: width - 200, y, size: 10, font, color: rgb(0.5, 0.5, 0.5) });
+
+    // 4. Draw Bill To Section
+    y -= 60;
+    page.drawText("BILL TO", { x: 50, y, size: 10, font: boldFont, color: rgb(0.5, 0.5, 0.5) });
+    y -= 15;
+    page.drawText(invoiceData.clientEmail || "Client Email", { x: 50, y, size: 12, font });
+
+    // 5. Draw Table Headers
+    y -= 50;
+    page.drawText("DESCRIPTION", { x: 50, y, size: 10, font: boldFont });
+    page.drawText("AMOUNT", { x: width - 100, y, size: 10, font: boldFont });
+    y -= 10;
+    page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 1, color: rgb(0.9, 0.9, 0.9) });
+    y -= 25;
+
+    // 6. Loop Through Dynamic Items
+    items.forEach(item => {
+      page.drawText(item.description || "Item description...", { x: 50, y, size: 12, font });
+      page.drawText(`INR ${item.amount || "0"}`, { x: width - 100, y, size: 12, font });
+      y -= 20; // Move down for the next row
+    });
+
+    // 7. Draw Totals
+    y -= 10;
+    page.drawLine({ start: { x: 50, y }, end: { x: width - 50, y }, thickness: 1, color: rgb(0.9, 0.9, 0.9) });
+    y -= 25;
+    page.drawText("Total Due", { x: width - 200, y, size: 12, font: boldFont });
+    page.drawText(`INR ${totalAmount}`, { x: width - 100, y, size: 14, font: boldFont, color: rgb(0.14, 0.38, 0.88) });
+
+    // 8. Serialize and Trigger Download
+    const pdfBytes = await pdfDoc.save();
+    const blob = new Blob([pdfBytes as any], { type: "application/pdf" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = `Invoice_${invoiceData.senderName.replace(/\s+/g, '_') || 'Draft'}.pdf`;
+    link.click();
+  };
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-8 grid md:grid-cols-2 gap-8 h-screen">
@@ -92,7 +145,7 @@ export default function InvoiceBuilder() {
             </div>
             
             <div className="space-y-3">
-              {items.map((item, index) => (
+              {items.map((item) => (
                 <div key={item.id} className="flex gap-3 items-start">
                   <div className="flex-grow">
                     <input 
@@ -128,7 +181,12 @@ export default function InvoiceBuilder() {
           <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all">
             <Send size={18} /> Generate Link
           </button>
-          <button className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-xl flex items-center justify-center transition-all group" title="Download PDF">
+          {/* NEW: OnClick Handler Added Here */}
+          <button 
+            onClick={generatePDF}
+            className="bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-4 rounded-xl flex items-center justify-center transition-all group" 
+            title="Download PDF"
+          >
             <FileText size={18} className="group-hover:text-blue-600 transition-colors" />
           </button>
         </div>
@@ -159,7 +217,6 @@ export default function InvoiceBuilder() {
               <p className="font-semibold text-gray-600 text-sm">AMOUNT</p>
             </div>
             
-            {/* Mapped Line Items */}
             <div className="space-y-3 mb-6">
               {items.map((item) => (
                 <div key={item.id} className="flex justify-between">
