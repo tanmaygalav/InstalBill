@@ -1,7 +1,9 @@
+import InvoiceBuilder from "@/components/InvoiceBuilder";
+
 export default function Home() {
   return (
-    <main className="min-h-screen flex items-center justify-center">
-      <h1 className="text-3xl font-bold">InstaBill Workspace</h1>
+    <main className="min-h-screen bg-gray-50">
+      <InvoiceBuilder />
     </main>
   );
 }
