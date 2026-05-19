@@ -1,5 +1,5 @@
 "use client";
-
+import { supabase } from "@/lib/supabase"; // <-- NEW
 import { useState } from "react";
 import { Receipt, Send, FileText, Plus, Trash2 } from "lucide-react";
 import { PDFDocument, rgb, StandardFonts } from "pdf-lib"; // <-- NEW IMPORT
@@ -12,7 +12,7 @@ export default function InvoiceBuilder() {
   });
 
   const [items, setItems] = useState([{ id: 1, description: "", amount: "" }]);
-
+  const [isGenerating, setIsGenerating] = useState(false); // <-- NEW
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setInvoiceData({ ...invoiceData, [e.target.name]: e.target.value });
   };
@@ -32,6 +32,46 @@ export default function InvoiceBuilder() {
   };
 
   const totalAmount = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
+
+
+
+
+
+  // --- NEW: DATABASE INSERTION ENGINE ---
+const generateLink = async () => {
+  setIsGenerating(true);
+  
+  try {
+    const { data, error } = await supabase
+      .from('invoices')
+      .insert([
+        {
+          sender_name: invoiceData.senderName || "Unknown",
+          client_email: invoiceData.clientEmail || "Unknown",
+          upi_id: invoiceData.upiId || "Unknown",
+          total_amount: totalAmount,
+          items: items, // Saves the whole array as JSON automatically!
+        }
+      ])
+      .select(); // Tells Supabase to return the newly created row data
+
+    if (error) throw error;
+
+    alert(`Success! Invoice saved to database with ID: \n${data[0].id}`);
+    console.log("Supabase Response:", data[0]);
+
+  } catch (error) {
+    console.error("Error saving to database:", error);
+    alert("Failed to connect to database. Check the console.");
+  } finally {
+    setIsGenerating(false);
+  }
+};
+
+
+
+
+
 
   // --- NEW: PDF GENERATION ENGINE ---
   const generatePDF = async () => {
@@ -178,9 +218,13 @@ export default function InvoiceBuilder() {
         </div>
 
         <div className="mt-8 pt-6 border-t border-gray-100 flex gap-3">
-          <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all">
-            <Send size={18} /> Generate Link
-          </button>
+          <button 
+            onClick={generateLink}
+            disabled={isGenerating}
+            className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white font-medium py-3 px-4 rounded-xl flex items-center justify-center gap-2 transition-all"
+            >
+            <Send size={18} /> {isGenerating ? "Saving..." : "Generate Link"}
+            </button>
           {/* NEW: OnClick Handler Added Here */}
           <button 
             onClick={generatePDF}
