@@ -26,10 +26,21 @@ export default function DashboardPage() {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
+        // 1. Check if the user is legally logged in
+        const { data: { user } } = await supabase.auth.getUser();
+        
+        if (!user) {
+          // 2. If not logged in, kick them to the login page
+          window.location.href = "/login";
+          return;
+        }
+
+        // 3. If logged in, fetch ONLY their invoices
         const { data, error } = await supabase
           .from('invoices')
           .select('*')
-          .order('created_at', { ascending: false }); // Newest first
+          .eq('user_id', user.id) // <-- Strict Auth Filter
+          .order('created_at', { ascending: false });
 
         if (error) throw error;
         if (data) setInvoices(data);

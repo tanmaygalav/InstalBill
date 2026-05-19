@@ -60,10 +60,21 @@ export default function InvoiceBuilder() {
   const generateLink = async () => {
     setIsGenerating(true);
     try {
+      // 1. Check for authenticated user
+      const { data: { user } } = await supabase.auth.getUser();
+      
+      if (!user) {
+        toast.error("Please log in to generate shareable links.", { icon: "🔒" });
+        router.push("/login"); // Route them to login
+        return;
+      }
+
+      // 2. Insert with the user's secure ID attached
       const { data, error } = await supabase
         .from('invoices')
         .insert([
           {
+            user_id: user.id, // <-- ATTACH THE AUTHENTICATED USER ID
             sender_name: invoiceData.senderName || "Unknown",
             client_email: invoiceData.clientEmail || "Unknown",
             upi_id: invoiceData.upiId || "Unknown",
@@ -77,9 +88,7 @@ export default function InvoiceBuilder() {
 
       const publicUrl = `${window.location.origin}/invoice/${data[0].id}`;
       await navigator.clipboard.writeText(publicUrl);
-
       toast.success("Payment link copied to clipboard!");
-      
       router.push(`/invoice/${data[0].id}`);
 
     } catch (error) {
