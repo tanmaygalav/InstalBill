@@ -14,7 +14,8 @@ import {
   Search,
   MoreHorizontal,
   Loader2,
-  Copy
+  Copy,
+  Check
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -22,10 +23,12 @@ import toast from "react-hot-toast";
 export default function DashboardPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [openMenuId, setOpenMenuId] = useState<string | null>(null); // Tracks which dropdown is open
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null);
 
-  // --- REAL DATA FETCHING & ROUTE SECURITY ---
+  // --- REAL DATA FETCHING, AUTH & LIVE SYNC ---
   useEffect(() => {
+    let channel: any;
+
     const fetchInvoices = async () => {
       try {
         const { data: { user } } = await supabase.auth.getUser();
@@ -43,6 +46,19 @@ export default function DashboardPage() {
 
         if (error) throw error;
         if (data) setInvoices(data);
+
+        // LIVE SYNC LISTENER
+        channel = supabase
+          .channel('dashboard-sync')
+          .on(
+            'postgres_changes',
+            { event: 'UPDATE', schema: 'public', table: 'invoices', filter: `user_id=eq.${user.id}` },
+            (payload) => {
+              setInvoices((prev) => prev.map((inv) => (inv.id === payload.new.id ? payload.new : inv)));
+            }
+          )
+          .subscribe();
+
       } catch (error) {
         console.error("Error fetching invoices:", error);
         toast.error("Failed to load dashboard data.");
@@ -52,6 +68,10 @@ export default function DashboardPage() {
     };
 
     fetchInvoices();
+
+    return () => {
+      if (channel) supabase.removeChannel(channel);
+    };
   }, []);
 
   // --- MANUAL FREELANCER VERIFICATION ENGINE ---
@@ -72,6 +92,8 @@ export default function DashboardPage() {
         )
       );
 
+      setOpenMenuId(null);
+
       if (confirmPaid) {
         toast.success("Invoice settled and marked as verified!");
       } else {
@@ -88,7 +110,7 @@ export default function DashboardPage() {
     const url = `${window.location.origin}/invoice/${invoiceId}`;
     navigator.clipboard.writeText(url);
     toast.success("Payment link copied to clipboard!");
-    setOpenMenuId(null); // Close the menu after copying
+    setOpenMenuId(null);
   };
 
   // --- DYNAMIC FINANCIAL METRICS ---
@@ -223,8 +245,11 @@ export default function DashboardPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           
           {/* Main List: REAL INVOICES ACTIVITY ROW */}
-          <motion.div variants={itemVariants} className="lg:col-span-2 bg-white rounded-3xl shadow-lg shadow-black/5 border border-stone-200 overflow-hidden h-fit">
-            <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
+          {/* FIXED: Removed overflow-hidden here */}
+          <motion.div variants={itemVariants} className="lg:col-span-2 bg-white rounded-3xl shadow-lg shadow-black/5 border border-stone-200 h-fit">
+            
+            {/* FIXED: Added rounded-t-3xl here */}
+            <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50 rounded-t-3xl">
               <h3 className="text-lg font-bold text-[#111827]">Recent Activity</h3>
               <div className="flex gap-2">
                 <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors bg-white rounded-lg border border-stone-200 shadow-sm"><Search size={16} /></button>
@@ -294,7 +319,7 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       
-                      {/* UPDATED RIGHT SIDE: Metrics, Menu, & Manual Override */}
+                      {/* RIGHT SIDE: Metrics, Menu, & Manual Override */}
                       <div className="text-left sm:text-right flex flex-col sm:items-end w-full sm:w-auto pl-14 sm:pl-0 mt-3 sm:mt-0">
                         <div className="flex items-center justify-between sm:justify-end gap-4 w-full">
                           <div>
@@ -317,29 +342,28 @@ export default function DashboardPage() {
 
                             {/* Dropdown Card */}
                             {openMenuId === inv.id && (
-                              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-stone-200 shadow-xl rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-stone-200 shadow-xl rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right text-left">
                                 <button 
                                   onClick={() => handleCopyLink(inv.id)}
-                                  className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-stone-50 transition-colors flex items-center gap-2"
+                                  className="w-full px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-stone-50 transition-colors flex items-center gap-2"
                                 >
                                   <Copy size={16} className="text-slate-400" /> Copy Public Link
                                 </button>
+                                {/* Fallback manual override hidden in the menu */}
+                                {inv.status === 'pending' && (
+                                  <button 
+                                    onClick={() => handleVerifyStatus(inv.id, true)}
+                                    className="w-full px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-2"
+                                  >
+                                    <Check size={16} className="text-indigo-400" /> Force Mark Paid
+                                  </button>
+                                )}
                               </div>
                             )}
                           </div>
                         </div>
 
-                        {/* MANUAL OVERRIDE BUTTON (Only shows if standard pending) */}
-                        {inv.status === 'pending' && (
-                          <button 
-                            onClick={() => handleVerifyStatus(inv.id, true)}
-                            className="mt-3 sm:mt-2 text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors w-max"
-                          >
-                            Mark as Paid
-                          </button>
-                        )}
                       </div>
-
                     </motion.div>
                   )
                 })
@@ -347,7 +371,8 @@ export default function DashboardPage() {
             </div>
             
             {invoices.length > 0 && (
-              <div className="p-4 bg-stone-50 border-t border-stone-100 text-center">
+              /* FIXED: Added rounded-b-3xl here */
+              <div className="p-4 bg-stone-50 border-t border-stone-100 text-center rounded-b-3xl">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">End of recent activity</p>
               </div>
             )}
