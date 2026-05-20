@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { motion, Variants } from "framer-motion"; // <-- imported Variants
+import { motion, Variants } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { 
   CheckCircle, 
@@ -22,24 +22,23 @@ export default function DashboardPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
-  // --- REAL DATA FETCHING ---
+  // --- REAL DATA FETCHING & ROUTE SECURITY ---
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        // 1. Check if the user is legally logged in
+        // 1. Authenticate user access
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
-          // 2. If not logged in, kick them to the login page
           window.location.href = "/login";
           return;
         }
 
-        // 3. If logged in, fetch ONLY their invoices
+        // 2. Fetch scoped data records
         const { data, error } = await supabase
           .from('invoices')
           .select('*')
-          .eq('user_id', user.id) // <-- Strict Auth Filter
+          .eq('user_id', user.id)
           .order('created_at', { ascending: false });
 
         if (error) throw error;
@@ -55,6 +54,36 @@ export default function DashboardPage() {
     fetchInvoices();
   }, []);
 
+  // --- MANUAL FREELANCER VERIFICATION ENGINE ---
+  const handleVerifyStatus = async (invoiceId: string, confirmPaid: boolean) => {
+    const finalStatus = confirmPaid ? 'verified' : 'pending';
+    
+    try {
+      const { error } = await supabase
+        .from('invoices')
+        .update({ status: finalStatus })
+        .eq('id', invoiceId);
+
+      if (error) throw error;
+
+      // Optimistically update frontend table values
+      setInvoices(prevInvoices => 
+        prevInvoices.map(inv => 
+          inv.id === invoiceId ? { ...inv, status: finalStatus } : inv
+        )
+      );
+
+      if (confirmPaid) {
+        toast.success("Invoice settled and marked as verified!");
+      } else {
+        toast.error("Claim rejected. Invoice reset to unpaid pending status.");
+      }
+    } catch (error) {
+      console.error("Error updating status:", error);
+      toast.error("Failed to update transaction status.");
+    }
+  };
+
   // --- DYNAMIC FINANCIAL METRICS ---
   const totalCollected = invoices
     .filter(inv => inv.status === 'paid' || inv.status === 'verified')
@@ -67,7 +96,7 @@ export default function DashboardPage() {
   const pendingCount = invoices.filter(inv => inv.status === 'pending' || inv.status === 'verification_pending').length;
   const totalInvoices = invoices.length;
 
-  // --- FRAMER MOTION CONFIG (WITH STRICT TYPES) ---
+  // --- FRAMER MOTION CONFIG ---
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.1 } }
@@ -87,7 +116,7 @@ export default function DashboardPage() {
     return (
       <div className="min-h-screen bg-[#FEF9F2] flex flex-col items-center justify-center text-[#111827]">
         <Loader2 className="animate-spin text-indigo-600 mb-4" size={40} />
-        <p className="font-medium text-slate-500">Syncing with database...</p>
+        <p className="font-medium text-slate-500">Syncing secure billing data...</p>
       </div>
     );
   }
@@ -95,7 +124,7 @@ export default function DashboardPage() {
   return (
     <div className="min-h-screen pb-12 bg-[#FEF9F2] text-[#111827]">
       
-      {/* TOP NAVIGATION */}
+      {/* TOP NAVIGATION BAR */}
       <nav className="bg-white border-b border-stone-200 sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
@@ -120,7 +149,7 @@ export default function DashboardPage() {
         animate="show"
         className="max-w-7xl mx-auto px-4 md:px-8 pt-10"
       >
-        {/* HEADER SECTION */}
+        {/* HEADER AREA */}
         <motion.div variants={itemVariants} className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10">
           <div>
             <p className="text-sm font-bold text-slate-400 mb-1 uppercase tracking-wider">Overview</p>
@@ -141,7 +170,7 @@ export default function DashboardPage() {
           </Link>
         </motion.div>
 
-        {/* DYNAMIC METRICS GRID */}
+        {/* FINANCIAL DATA SUMMARY SUMMARY CARDS */}
         <div className="grid md:grid-cols-3 gap-6 mb-10">
           {/* Card 1: Total Earnings */}
           <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200 relative overflow-hidden group">
@@ -159,7 +188,7 @@ export default function DashboardPage() {
             </h2>
           </motion.div>
 
-          {/* Card 2: Pending */}
+          {/* Card 2: Pending Volume */}
           <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100">
@@ -173,7 +202,7 @@ export default function DashboardPage() {
             <p className="text-sm text-slate-500 mt-2 font-medium">Across {pendingCount} pending invoice(s)</p>
           </motion.div>
 
-          {/* Card 3: Active Links */}
+          {/* Card 3: Invoices Counter */}
           <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2.5 bg-stone-100 text-stone-600 rounded-xl border border-stone-200">
@@ -186,10 +215,10 @@ export default function DashboardPage() {
           </motion.div>
         </div>
 
-        {/* BOTTOM SECTION: Activity & Upsell */}
+        {/* BOTTOM CONTENT GRID */}
         <div className="grid lg:grid-cols-3 gap-8">
           
-          {/* Main List: REAL INVOICES */}
+          {/* Main List: REAL INVOICES ACTIVITY ROW */}
           <motion.div variants={itemVariants} className="lg:col-span-2 bg-white rounded-3xl shadow-lg shadow-black/5 border border-stone-200 overflow-hidden h-fit">
             <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50">
               <h3 className="text-lg font-bold text-[#111827]">Recent Activity</h3>
@@ -201,7 +230,7 @@ export default function DashboardPage() {
             <div className="divide-y divide-stone-100">
               {invoices.length === 0 ? (
                 <div className="p-10 text-center">
-                  <p className="text-slate-500 font-medium mb-4">No invoices found.</p>
+                  <p className="text-slate-500 font-medium mb-4">No tracking elements configured yet.</p>
                   <Link href="/">
                     <button className="text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold py-2 px-4 rounded-lg transition-colors border border-indigo-100">
                       Create Your First Invoice
@@ -233,16 +262,29 @@ export default function DashboardPage() {
                             <span className="text-xs text-slate-500 font-medium">{new Date(inv.created_at).toLocaleDateString()}</span>
                           </div>
 
-                          {/* Actionable state for Verification Pending */}
+                          {/* DYNAMIC ACTION VERIFICATION BLOCK FOR TRANSACTIONS */}
                           {isVerificationPending && (
-                             <div className="flex items-center gap-2 mt-3 p-2.5 bg-amber-50 rounded-xl border border-amber-100 w-fit">
-                               <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                               <p className="text-[11px] font-semibold text-amber-800">
-                                 Client claims paid. Check bank app.
-                               </p>
-                               <button className="text-[10px] uppercase tracking-wider bg-green-600 hover:bg-green-700 text-white font-bold px-2 py-1 rounded transition-colors ml-2">
-                                 Verify
-                               </button>
+                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 p-3 bg-amber-50 rounded-xl border border-amber-100 w-full max-w-xl animate-in fade-in zoom-in-95 duration-200">
+                               <div className="flex items-center gap-2 flex-shrink-0">
+                                 <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                                 <p className="text-[11.5px] font-bold text-amber-900 leading-none">
+                                   Client declared payment complete.
+                                 </p>
+                               </div>
+                               <div className="flex gap-2 sm:ml-auto">
+                                 <button 
+                                   onClick={() => handleVerifyStatus(inv.id, true)}
+                                   className="text-[11px] uppercase tracking-wider bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm active:scale-[0.97]"
+                                 >
+                                   Approve
+                                 </button>
+                                 <button 
+                                   onClick={() => handleVerifyStatus(inv.id, false)}
+                                   className="text-[11px] uppercase tracking-wider bg-white hover:bg-red-50 hover:text-red-600 text-slate-700 font-bold px-3 py-1.5 rounded-lg border border-stone-200 transition-colors shadow-sm active:scale-[0.97]"
+                                 >
+                                   Reject
+                                 </button>
+                               </div>
                              </div>
                           )}
                         </div>
@@ -274,7 +316,7 @@ export default function DashboardPage() {
             )}
           </motion.div>
 
-          {/* Sidebar: Pro Upsell */}
+          {/* RIGHT SIDEBAR: UPSELL PANELS */}
           <motion.div variants={itemVariants} className="space-y-6">
             <div className="bg-gradient-to-br from-indigo-900 to-[#111827] rounded-3xl p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
