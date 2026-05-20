@@ -13,7 +13,8 @@ import {
   Sparkles,
   Search,
   MoreHorizontal,
-  Loader2
+  Loader2,
+  Copy
 } from "lucide-react";
 import Link from "next/link";
 import toast from "react-hot-toast";
@@ -21,12 +22,12 @@ import toast from "react-hot-toast";
 export default function DashboardPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [openMenuId, setOpenMenuId] = useState<string | null>(null); // Tracks which dropdown is open
 
   // --- REAL DATA FETCHING & ROUTE SECURITY ---
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        // 1. Authenticate user access
         const { data: { user } } = await supabase.auth.getUser();
         
         if (!user) {
@@ -34,7 +35,6 @@ export default function DashboardPage() {
           return;
         }
 
-        // 2. Fetch scoped data records
         const { data, error } = await supabase
           .from('invoices')
           .select('*')
@@ -66,7 +66,6 @@ export default function DashboardPage() {
 
       if (error) throw error;
 
-      // Optimistically update frontend table values
       setInvoices(prevInvoices => 
         prevInvoices.map(inv => 
           inv.id === invoiceId ? { ...inv, status: finalStatus } : inv
@@ -82,6 +81,14 @@ export default function DashboardPage() {
       console.error("Error updating status:", error);
       toast.error("Failed to update transaction status.");
     }
+  };
+
+  // --- COPY LINK HELPER ---
+  const handleCopyLink = (invoiceId: string) => {
+    const url = `${window.location.origin}/invoice/${invoiceId}`;
+    navigator.clipboard.writeText(url);
+    toast.success("Payment link copied to clipboard!");
+    setOpenMenuId(null); // Close the menu after copying
   };
 
   // --- DYNAMIC FINANCIAL METRICS ---
@@ -170,9 +177,8 @@ export default function DashboardPage() {
           </Link>
         </motion.div>
 
-        {/* FINANCIAL DATA SUMMARY SUMMARY CARDS */}
+        {/* FINANCIAL DATA SUMMARY CARDS */}
         <div className="grid md:grid-cols-3 gap-6 mb-10">
-          {/* Card 1: Total Earnings */}
           <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-6 opacity-5 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform duration-500">
               <TrendingUp size={100} className="text-indigo-600" />
@@ -188,7 +194,6 @@ export default function DashboardPage() {
             </h2>
           </motion.div>
 
-          {/* Card 2: Pending Volume */}
           <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100">
@@ -202,7 +207,6 @@ export default function DashboardPage() {
             <p className="text-sm text-slate-500 mt-2 font-medium">Across {pendingCount} pending invoice(s)</p>
           </motion.div>
 
-          {/* Card 3: Invoices Counter */}
           <motion.div variants={itemVariants} className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200">
             <div className="flex justify-between items-start mb-4">
               <div className="p-2.5 bg-stone-100 text-stone-600 rounded-xl border border-stone-200">
@@ -290,19 +294,52 @@ export default function DashboardPage() {
                         </div>
                       </div>
                       
-                      <div className="text-left sm:text-right flex items-center justify-between sm:justify-end gap-4 w-full sm:w-auto pl-14 sm:pl-0">
-                        <div>
-                          <p className="font-bold text-[#111827] text-lg tracking-tight">₹{Number(inv.total_amount).toLocaleString('en-IN')}</p>
-                          <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block mt-1 ${
-                            isPaid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                          }`}>
-                            {inv.status.replace('_', ' ')}
-                          </span>
+                      {/* UPDATED RIGHT SIDE: Metrics, Menu, & Manual Override */}
+                      <div className="text-left sm:text-right flex flex-col sm:items-end w-full sm:w-auto pl-14 sm:pl-0 mt-3 sm:mt-0">
+                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full">
+                          <div>
+                            <p className="font-bold text-[#111827] text-lg tracking-tight">₹{Number(inv.total_amount).toLocaleString('en-IN')}</p>
+                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block mt-1 ${
+                              isPaid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
+                            }`}>
+                              {inv.status.replace('_', ' ')}
+                            </span>
+                          </div>
+                          
+                          {/* THREE DOTS DROPDOWN MENU */}
+                          <div className="relative">
+                            <button 
+                              onClick={() => setOpenMenuId(openMenuId === inv.id ? null : inv.id)}
+                              className="text-stone-300 hover:text-stone-600 hover:bg-stone-100 p-1 rounded-md transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
+                            >
+                              <MoreHorizontal size={20} />
+                            </button>
+
+                            {/* Dropdown Card */}
+                            {openMenuId === inv.id && (
+                              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-stone-200 shadow-xl rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right">
+                                <button 
+                                  onClick={() => handleCopyLink(inv.id)}
+                                  className="w-full text-left px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-stone-50 transition-colors flex items-center gap-2"
+                                >
+                                  <Copy size={16} className="text-slate-400" /> Copy Public Link
+                                </button>
+                              </div>
+                            )}
+                          </div>
                         </div>
-                        <button className="text-stone-300 hover:text-stone-600 transition-colors opacity-0 group-hover:opacity-100 hidden sm:block">
-                          <MoreHorizontal size={20} />
-                        </button>
+
+                        {/* MANUAL OVERRIDE BUTTON (Only shows if standard pending) */}
+                        {inv.status === 'pending' && (
+                          <button 
+                            onClick={() => handleVerifyStatus(inv.id, true)}
+                            className="mt-3 sm:mt-2 text-[10px] font-bold uppercase tracking-wider text-indigo-600 bg-indigo-50 hover:bg-indigo-100 px-3 py-1.5 rounded-md transition-colors w-max"
+                          >
+                            Mark as Paid
+                          </button>
+                        )}
                       </div>
+
                     </motion.div>
                   )
                 })
