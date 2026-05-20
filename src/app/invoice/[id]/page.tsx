@@ -1,28 +1,88 @@
-import { supabase } from "@/lib/supabase";
-import { notFound } from "next/navigation";
-import { QRCodeSVG } from "qrcode.react";
-import { CheckCircle, ShieldCheck } from "lucide-react";
+"use client";
 
-export default async function PublicInvoicePage({
+import { useEffect, useState, use } from "react";
+import { supabase } from "@/lib/supabase";
+import { QRCodeSVG } from "qrcode.react";
+import { CheckCircle, ShieldCheck, Check, Loader2 } from "lucide-react";
+import toast from "react-hot-toast";
+
+export default function PublicInvoicePage({
   params,
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }> | { id: string };
 }) {
-  const resolvedParams = await params;
+  // Unwrap params safely for Next.js consistency
+  const resolvedParams = params instanceof Promise ? use(params) : params;
   const invoiceId = resolvedParams.id;
 
-  const { data: invoice, error } = await supabase
-    .from("invoices")
-    .select("*")
-    .eq("id", invoiceId)
-    .single();
+  const [invoice, setInvoice] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUpdating, setIsUpdating] = useState(false);
 
-  if (error || !invoice) {
-    notFound();
+  // --- REAL-TIME DATA SYNC ---
+  useEffect(() => {
+    const fetchInvoice = async () => {
+      try {
+        const { data, error } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("id", invoiceId)
+          .single();
+
+        if (error) throw error;
+        setInvoice(data);
+      } catch (err) {
+        console.error("Error fetching invoice:", err);
+        toast.error("Invoice not found.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchInvoice();
+  }, [invoiceId]);
+
+  // --- CLIENT SEALS PAYMENT REQUEST ---
+  const handleMarkAsPaid = async () => {
+    setIsUpdating(true);
+    try {
+      const { error } = await supabase
+        .from("invoices")
+        .update({ status: "verification_pending" })
+        .eq("id", invoiceId);
+
+      if (error) throw error;
+      
+      setInvoice((prev: any) => ({ ...prev, status: "verification_pending" }));
+      toast.success("Freelancer notified! Awaiting confirmation.");
+    } catch (err) {
+      console.error("Error updating status:", err);
+      toast.error("Failed to update status. Please try again.");
+    } finally {
+      setIsUpdating(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FEF9F2] flex flex-col items-center justify-center text-[#111827]">
+        <Loader2 className="animate-spin text-indigo-600 mb-2" size={32} />
+        <p className="text-sm font-medium text-slate-500">Retrieving secure invoice details...</p>
+      </div>
+    );
   }
 
-  // UPI String without the `pn` parameter to prevent merchant name mismatch errors
+  if (!invoice) {
+    return (
+      <div className="min-h-screen bg-[#FEF9F2] flex items-center justify-center text-[#111827] font-medium">
+        Invoice data could not be verified or found.
+      </div>
+    );
+  }
+
   const upiString = `upi://pay?pa=${invoice.upi_id}&am=${invoice.total_amount}&cu=INR`;
+  const isPaid = invoice.status === "paid" || invoice.status === "verified";
+  const isPendingVerification = invoice.status === "verification_pending";
 
   return (
     <div className="min-h-screen bg-[#FEF9F2] text-[#111827] flex flex-col items-center py-12 px-4 sm:px-8 selection:bg-indigo-100">
@@ -75,10 +135,10 @@ export default async function PublicInvoicePage({
             </div>
             
             <div className="space-y-4 mb-8">
-              {invoice.items.map((item: any, index: number) => (
+              {invoice.items && invoice.items.map((item: any, index: number) => (
                 <div key={index} className="grid grid-cols-5 items-center">
-                  <p className="col-span-4 text-slate-700 font-medium leading-relaxed">{item.description}</p>
-                  <p className="text-right text-[#111827] font-semibold text-lg tracking-tight">₹{item.amount}</p>
+                  <p className="col-span-4 text-slate-700 font-medium leading-relaxed">{item.description || "—"}</p>
+                  <p className="text-right text-[#111827] font-semibold text-lg tracking-tight">₹{item.amount || "0"}</p>
                 </div>
               ))}
             </div>
@@ -99,39 +159,89 @@ export default async function PublicInvoicePage({
         {/* RIGHT SIDE: The Premium Payment Portal */}
         <div className="lg:col-span-2 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-12 duration-700 delay-150 fill-mode-both">
           
-          <div className="bg-white p-8 rounded-3xl shadow-xl shadow-black/5 border border-stone-200 flex flex-col items-center text-center">
-            <div className="bg-indigo-50 text-indigo-600 p-3 rounded-2xl mb-4">
+          <div className="bg-white p-8 rounded-3xl shadow-xl shadow-black/5 border border-stone-200 flex flex-col items-center text-center relative overflow-hidden">
+            <div className={`p-3 rounded-2xl mb-4 transition-colors ${isPaid ? "bg-green-50 text-green-600" : isPendingVerification ? "bg-amber-50 text-amber-600" : "bg-indigo-50 text-indigo-600"}`}>
               <ShieldCheck size={28} />
             </div>
-            <h3 className="text-2xl font-bold text-[#111827] mb-2 tracking-tight">Pay via UPI</h3>
-            <p className="text-slate-500 text-sm mb-8 font-medium">Scan with any UPI app to pay instantly</p>
+            <h3 className="text-2xl font-bold text-[#111827] mb-2 tracking-tight">
+              {isPaid ? "Payment Complete" : isPendingVerification ? "Verifying Transaction" : "Pay via UPI"}
+            </h3>
+            <p className="text-slate-500 text-sm mb-8 font-medium px-2">
+              {isPaid ? "This transaction has been settled successfully." : isPendingVerification ? "Awaiting manual payout check by freelancer." : "Scan with any UPI app to pay instantly"}
+            </p>
             
-            {/* Styled QR Code Box */}
-            <div className="bg-stone-50 p-5 rounded-3xl border-2 border-stone-100 shadow-inner mb-8">
-              <div className="bg-white p-3 rounded-2xl shadow-sm">
+            {/* Styled QR Code Box with conditional treatment */}
+            <div className="bg-stone-50 p-5 rounded-3xl border-2 border-stone-100 shadow-inner mb-8 relative w-full flex items-center justify-center">
+              <div className={`bg-white p-3 rounded-2xl shadow-sm transition-all duration-500 ${isPaid || isPendingVerification ? "blur-md opacity-40 grayscale pointer-events-none" : ""}`}>
                 <QRCodeSVG 
                   value={upiString} 
                   size={200} 
                   level="H"
                   includeMargin={false}
-                  fgColor="#111827" // Using charcoal instead of harsh black
+                  fgColor="#111827"
                 />
               </div>
+
+              {/* Status overlay checks */}
+              {isPaid && (
+                <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in duration-300">
+                  <div className="bg-green-600 text-white p-4 rounded-full shadow-xl">
+                    <Check size={36} strokeWidth={3} />
+                  </div>
+                </div>
+              )}
+
+              {isPendingVerification && (
+                <div className="absolute inset-0 flex items-center justify-center animate-in zoom-in duration-300">
+                  <div className="bg-amber-500 text-white p-4 rounded-full shadow-xl">
+                    <Loader2 className="animate-spin" size={36} strokeWidth={3} />
+                  </div>
+                </div>
+              )}
             </div>
             
             <p className="text-sm text-slate-500 font-medium">
               Secure transfer to <span className="font-bold text-[#111827]">{invoice.sender_name}</span>
             </p>
-            {/* Note: UPI ID string is purposefully hidden here for privacy! */}
           </div>
           
-          <div className="bg-indigo-600 p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-indigo-200 text-white">
-            <div>
-              <p className="text-sm font-bold text-indigo-200 tracking-wider uppercase mb-1">Payment Status</p>
-              <p className="text-lg font-semibold">Awaiting Scan</p>
+          {/* Dynamic Action Trigger Banner */}
+          {invoice.status === "pending" && (
+            <div className="flex flex-col gap-3 w-full">
+              <button 
+                onClick={handleMarkAsPaid}
+                disabled={isUpdating}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white p-5 rounded-2xl flex items-center justify-center font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
+              >
+                {isUpdating ? "Notifying Freelancer..." : "I've Completed the Payment"}
+              </button>
+              <p className="text-xs text-slate-400 text-center font-medium px-4">
+                Clicking this updates the merchant's live dashboard to request confirmation.
+              </p>
             </div>
-            <div className="w-10 h-10 rounded-full border-4 border-indigo-400 border-t-white animate-spin"></div>
-          </div>
+          )}
+
+          {isPendingVerification && (
+            <div className="bg-amber-600 p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-amber-200 text-white">
+              <div>
+                <p className="text-sm font-bold text-amber-200 tracking-wider uppercase mb-1">Verification Status</p>
+                <p className="text-lg font-semibold">Pending Approval</p>
+              </div>
+              <div className="w-10 h-10 rounded-full border-4 border-amber-400 border-t-white animate-spin"></div>
+            </div>
+          )}
+
+          {isPaid && (
+            <div className="bg-green-600 p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-green-200 text-white animate-in fade-in duration-500">
+              <div>
+                <p className="text-sm font-bold text-green-200 tracking-wider uppercase mb-1">Invoice Status</p>
+                <p className="text-lg font-semibold">Succeeded & Closed</p>
+              </div>
+              <div className="w-10 h-10 rounded-full bg-green-500 flex items-center justify-center text-white">
+                <Check size={20} strokeWidth={3} />
+              </div>
+            </div>
+          )}
           
         </div>
 
