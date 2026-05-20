@@ -47,9 +47,9 @@ export default function DashboardPage() {
         if (error) throw error;
         if (data) setInvoices(data);
 
-        // LIVE SYNC LISTENER
+        // LIVE SYNC LISTENER (Fixed React Strict Mode bug with Math.random)
         channel = supabase
-          .channel('dashboard-sync')
+          .channel(`dashboard-sync-${Math.random()}`)
           .on(
             'postgres_changes',
             { event: 'UPDATE', schema: 'public', table: 'invoices', filter: `user_id=eq.${user.id}` },
@@ -70,7 +70,9 @@ export default function DashboardPage() {
     fetchInvoices();
 
     return () => {
-      if (channel) supabase.removeChannel(channel);
+      if (channel) {
+        supabase.removeChannel(channel);
+      }
     };
   }, []);
 
@@ -245,10 +247,8 @@ export default function DashboardPage() {
         <div className="grid lg:grid-cols-3 gap-8">
           
           {/* Main List: REAL INVOICES ACTIVITY ROW */}
-          {/* FIXED: Removed overflow-hidden here */}
           <motion.div variants={itemVariants} className="lg:col-span-2 bg-white rounded-3xl shadow-lg shadow-black/5 border border-stone-200 h-fit">
             
-            {/* FIXED: Added rounded-t-3xl here */}
             <div className="p-6 border-b border-stone-100 flex justify-between items-center bg-stone-50/50 rounded-t-3xl">
               <h3 className="text-lg font-bold text-[#111827]">Recent Activity</h3>
               <div className="flex gap-2">
@@ -302,7 +302,7 @@ export default function DashboardPage() {
                                    </p>
                                  </div>
                                  
-                                 {/* NEW: Render the UTR number cleanly for the freelancer */}
+                                 {/* Render the UTR number cleanly for the freelancer */}
                                  {inv.utr_number && (
                                    <div className="flex items-center gap-2 ml-4">
                                      <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider">UTR Ref:</span>
@@ -384,7 +384,6 @@ export default function DashboardPage() {
             </div>
             
             {invoices.length > 0 && (
-              /* FIXED: Added rounded-b-3xl here */
               <div className="p-4 bg-stone-50 border-t border-stone-100 text-center rounded-b-3xl">
                 <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">End of recent activity</p>
               </div>
