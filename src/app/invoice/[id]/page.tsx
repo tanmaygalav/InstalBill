@@ -3,7 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
-import { CheckCircle, ShieldCheck, Check, Loader2, Download } from "lucide-react"; // <-- Added Download icon
+import { CheckCircle, ShieldCheck, Check, Loader2, Download, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function PublicInvoicePage({ params }: { params: Promise<{ id: string }> | { id: string }; }) {
@@ -13,6 +13,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
   const [invoice, setInvoice] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
+  const [utrNumber, setUtrNumber] = useState(""); // NEW: State for UTR tracking
 
   useEffect(() => {
     let channel: any;
@@ -23,7 +24,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
         if (error) throw error;
         setInvoice(data);
 
-        // --- LIVE SYNC LISTENER ---
         channel = supabase
           .channel('public-invoice-sync')
           .on(
@@ -50,11 +50,24 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
   }, [invoiceId]);
 
   const handleMarkAsPaid = async () => {
+    if (utrNumber.trim().length < 12) {
+      toast.error("Please enter a valid 12-digit UPI Reference Number.");
+      return;
+    }
+
     setIsUpdating(true);
     try {
-      const { error } = await supabase.from("invoices").update({ status: "verification_pending" }).eq("id", invoiceId);
+      // NEW: We now send the UTR number to the database along with the status change
+      const { error } = await supabase
+        .from("invoices")
+        .update({ 
+          status: "verification_pending",
+          utr_number: utrNumber.trim() 
+        })
+        .eq("id", invoiceId);
+
       if (error) throw error;
-      setInvoice((prev: any) => ({ ...prev, status: "verification_pending" }));
+      setInvoice((prev: any) => ({ ...prev, status: "verification_pending", utr_number: utrNumber.trim() }));
     } catch (err) {
       toast.error("Failed to update status. Please try again.");
     } finally {
@@ -62,7 +75,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
     }
   };
 
-  // --- NATIVE PDF DOWNLOADER ---
   const handleDownloadPDF = () => {
     window.print();
   };
@@ -75,19 +87,16 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
   const isPendingVerification = invoice.status === "verification_pending";
 
   return (
-    // Added print:bg-white and print:py-0 to clean up the PDF background
     <div className="min-h-screen bg-[#FEF9F2] text-[#111827] flex flex-col items-center py-12 px-4 sm:px-8 print:bg-white print:py-0 print:px-0">
       
-      {/* Brand Header (Hidden on Print) */}
       <div className="w-full max-w-5xl mb-8 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-700 print:hidden">
         <div className="w-8 h-8 bg-indigo-600 rounded-xl shadow-md flex items-center justify-center p-1.5"><CheckCircle className="text-white w-full h-full" /></div>
         <span className="text-xl font-bold tracking-tighter text-[#111827]">InstaBill</span>
       </div>
 
-      {/* Added print:block to strip the grid layout during PDF generation */}
       <div className="max-w-5xl w-full grid lg:grid-cols-5 gap-10 items-start print:block">
         
-        {/* LEFT SIDE: The Crafted Invoice Document (Takes full width on print) */}
+        {/* LEFT SIDE: The Crafted Invoice Document */}
         <div className="lg:col-span-3 bg-white w-full shadow-2xl shadow-black/5 rounded-sm p-8 sm:p-12 flex flex-col relative border border-stone-100 animate-in fade-in slide-in-from-bottom-8 duration-700 print:shadow-none print:border-none print:p-0 print:w-full print:max-w-full">
           <div className="flex justify-between items-start mb-12 pb-10 border-b border-stone-100">
             <div>
@@ -99,6 +108,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
               <p className="font-bold text-[#111827] text-xl tracking-tight">{new Date(invoice.created_at).toLocaleDateString()}</p>
             </div>
           </div>
+          
           <div className="grid grid-cols-2 gap-10 mb-14">
             <div>
               <p className="text-[11.5px] font-bold text-slate-400 mb-2.5 uppercase tracking-wider">From</p>
@@ -109,6 +119,7 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
               <p className="text-xl font-medium text-slate-800 tracking-tight">{invoice.client_email}</p>
             </div>
           </div>
+          
           <div className="flex-grow">
             <div className="grid grid-cols-5 border-b-2 border-stone-100 pb-3.5 mb-5">
               <p className="col-span-4 font-bold text-slate-400 text-xs tracking-wider uppercase">Description</p>
@@ -123,20 +134,26 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
               ))}
             </div>
           </div>
+          
           <div className="border-t border-stone-100 pt-7 flex justify-between items-end mt-12">
             <div>
               <p className="text-[11.5px] font-bold text-slate-400 tracking-wider uppercase mb-1.5">Total Amount Due</p>
-              {/* Optional: Add a subtle "PAID" stamp that only shows on the final PDF */}
               {isPaid && <p className="text-sm font-bold text-green-600 tracking-wider uppercase mt-2 border-2 border-green-600 rounded px-2 py-1 inline-block opacity-70 transform -rotate-2">Settled</p>}
+              
+              {/* Show UTR on the physical receipt if it exists */}
+              {isPaid && invoice.utr_number && (
+                <div className="mt-4 print:mt-8 text-xs text-slate-400 font-mono">
+                  Ref: {invoice.utr_number}
+                </div>
+              )}
             </div>
             <div className="flex flex-col items-end"><span className="text-4xl font-extrabold text-[#111827] tracking-tight">₹{invoice.total_amount}</span></div>
           </div>
         </div>
 
-        {/* RIGHT SIDE: The Payment Portal (Hidden entirely on print) */}
+        {/* RIGHT SIDE: The Payment Portal */}
         <div className="lg:col-span-2 flex flex-col gap-6 animate-in fade-in slide-in-from-bottom-12 duration-700 delay-150 print:hidden">
           
-          {/* Hide the QR code box entirely if the invoice is successfully paid to keep UI clean */}
           {!isPaid && (
             <div className="bg-white p-8 rounded-3xl shadow-xl shadow-black/5 border border-stone-200 flex flex-col items-center text-center relative overflow-hidden">
               <div className={`p-3 rounded-2xl mb-4 transition-colors ${isPendingVerification ? "bg-amber-50 text-amber-600" : "bg-indigo-50 text-indigo-600"}`}>
@@ -159,10 +176,31 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             </div>
           )}
           
+          {/* NEW: UTR Input Form for Pending Invoices */}
           {invoice.status === "pending" && (
-            <div className="flex flex-col gap-3 w-full">
-              <button onClick={handleMarkAsPaid} disabled={isUpdating} className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white p-5 rounded-2xl flex items-center justify-center font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]">
-                {isUpdating ? "Notifying Freelancer..." : "I've Completed the Payment"}
+            <div className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200 flex flex-col gap-4">
+              <div>
+                <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Proof of Payment</label>
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+                  <input 
+                    type="text"
+                    maxLength={12}
+                    value={utrNumber}
+                    onChange={(e) => setUtrNumber(e.target.value.replace(/\D/g, ''))} // Force numbers only
+                    placeholder="Enter 12-digit UPI Ref No."
+                    className="w-full pl-10 pr-4 py-3 bg-stone-50 border border-stone-200 rounded-xl focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 outline-none text-[#111827] font-medium font-mono text-sm transition-all"
+                  />
+                </div>
+                <p className="text-[11px] text-slate-400 mt-2">Find this 12-digit number (UTR) in your bank/UPI app history.</p>
+              </div>
+
+              <button 
+                onClick={handleMarkAsPaid}
+                disabled={isUpdating || utrNumber.length < 12}
+                className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white p-4 rounded-xl flex items-center justify-center font-bold shadow-md transition-all active:scale-[0.98]"
+              >
+                {isUpdating ? "Submitting..." : "Submit Proof & Complete"}
               </button>
             </div>
           )}
@@ -174,7 +212,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             </div>
           )}
 
-          {/* THE NEW SUCCESS STATE WITH DOWNLOAD BUTTON */}
           {isPaid && (
             <div className="flex flex-col gap-4 animate-in fade-in zoom-in-95 duration-500">
               <div className="bg-green-600 p-6 rounded-3xl flex items-center justify-between shadow-lg shadow-green-200 text-white">

@@ -291,16 +291,29 @@ export default function DashboardPage() {
                             <span className="text-xs text-slate-500 font-medium">{new Date(inv.created_at).toLocaleDateString()}</span>
                           </div>
 
-                          {/* DYNAMIC ACTION VERIFICATION BLOCK FOR TRANSACTIONS */}
+                          {/* DYNAMIC ACTION VERIFICATION BLOCK WITH UTR */}
                           {isVerificationPending && (
-                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 p-3 bg-amber-50 rounded-xl border border-amber-100 w-full max-w-xl animate-in fade-in zoom-in-95 duration-200">
-                               <div className="flex items-center gap-2 flex-shrink-0">
-                                 <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                                 <p className="text-[11.5px] font-bold text-amber-900 leading-none">
-                                   Client declared payment complete.
-                                 </p>
+                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 p-3 bg-amber-50 rounded-xl border border-amber-100 w-full max-w-2xl animate-in fade-in zoom-in-95 duration-200">
+                               <div className="flex flex-col gap-1.5 flex-shrink-0">
+                                 <div className="flex items-center gap-2">
+                                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                                   <p className="text-[11.5px] font-bold text-amber-900 leading-none">
+                                     Client marked as paid.
+                                   </p>
+                                 </div>
+                                 
+                                 {/* NEW: Render the UTR number cleanly for the freelancer */}
+                                 {inv.utr_number && (
+                                   <div className="flex items-center gap-2 ml-4">
+                                     <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider">UTR Ref:</span>
+                                     <span className="bg-amber-100 text-amber-900 font-mono text-xs px-2 py-0.5 rounded border border-amber-200 shadow-sm select-all">
+                                       {inv.utr_number}
+                                     </span>
+                                   </div>
+                                 )}
                                </div>
-                               <div className="flex gap-2 sm:ml-auto">
+
+                               <div className="flex gap-2 sm:ml-auto mt-2 sm:mt-0">
                                  <button 
                                    onClick={() => handleVerifyStatus(inv.id, true)}
                                    className="text-[11px] uppercase tracking-wider bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm active:scale-[0.97]"
