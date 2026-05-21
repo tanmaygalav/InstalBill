@@ -4,20 +4,11 @@ import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import { 
-  CheckCircle, 
-  TrendingUp, 
-  Clock, 
-  Receipt, 
-  Plus, 
-  ArrowUpRight,
-  Sparkles,
-  Search,
-  MoreHorizontal,
-  Loader2,
-  Copy,
-  Check
+  CheckCircle, TrendingUp, Clock, Receipt, Plus, ArrowUpRight,
+  Sparkles, Search, MoreHorizontal, Loader2, Copy, Check, Download // <-- ADD DOWNLOAD HERE
 } from "lucide-react";
 import Link from "next/link";
+
 import toast from "react-hot-toast";
 
 export default function DashboardPage() {
@@ -116,6 +107,46 @@ export default function DashboardPage() {
     navigator.clipboard.writeText(url);
     toast.success("Payment link copied to clipboard!");
     setOpenMenuId(null);
+  };
+  // --- EXPORT TO EXCEL/CSV ---
+  const handleExportCSV = () => {
+    // 1. Check if there's data to export
+    // We use `filteredInvoices` so if they filter by "Settled", it only exports settled invoices!
+    if (filteredInvoices.length === 0) {
+      toast.error("No invoices to export.");
+      return;
+    }
+
+    // 2. Define standard Excel headers
+    const headers = ["Invoice ID", "Date", "Client Email", "Amount (INR)", "Status", "UTR Reference"];
+
+    // 3. Map the data into rows
+    const rows = filteredInvoices.map((inv) => [
+      inv.id.split('-')[0], // Use the short ID
+      new Date(inv.created_at).toLocaleDateString(),
+      inv.client_email,
+      inv.total_amount,
+      inv.status.replace('_', ' ').toUpperCase(),
+      inv.utr_number ? `'${inv.utr_number}` : "N/A" // The single quote forces Excel to treat UTR as text, preventing scientific notation bugs!
+    ]);
+
+    // 4. Build the CSV string
+    const csvContent = [
+      headers.join(","),
+      ...rows.map(row => row.join(","))
+    ].join("\n");
+
+    // 5. Trigger the hidden download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute("download", `InstaBill_Export_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    
+    toast.success("Excel report downloaded!");
   };
 
   // --- DYNAMIC FINANCIAL METRICS ---
@@ -458,10 +489,30 @@ export default function DashboardPage() {
             )}
           </motion.div>
 
-          {/* RIGHT SIDEBAR: UPSELL PANELS */}
+          {/* RIGHT SIDEBAR: UPSELL PANELS & ACTIONS */}
           <motion.div variants={itemVariants} className="space-y-6">
-            {/* Kept empty as per your original file, ready for Pro upgrades! */}
-          </motion.div>
+            
+            {/* QUICK ACTIONS PANEL */}
+            <div className="bg-white rounded-3xl p-6 shadow-lg shadow-black/5 border border-stone-200">
+              <h4 className="text-sm font-bold text-[#111827] mb-4 uppercase tracking-wider">Quick Actions</h4>
+              <div className="space-y-3">
+                <button 
+                  onClick={handleExportCSV}
+                  className="w-full text-left px-4 py-3.5 rounded-xl bg-stone-50 hover:bg-indigo-50 hover:text-indigo-700 font-semibold text-slate-700 text-sm transition-all border border-stone-200 hover:border-indigo-200 flex justify-between items-center group active:scale-[0.98]"
+                >
+                  <span className="flex items-center gap-2">
+                    <Download size={18} className="text-slate-400 group-hover:text-indigo-500 transition-colors" />
+                    Export to Excel (CSV)
+                  </span>
+                  <ArrowUpRight size={16} className="opacity-0 group-hover:opacity-100 text-indigo-400 transition-opacity" />
+                </button>
+              </div>
+              <p className="text-[11px] text-slate-400 mt-4 font-medium leading-relaxed">
+                Exports currently respect your active filters. To export all time data, ensure the "All Invoices" tab is selected.
+              </p>
+            </div>
+
+          </motion.div> 
 
         </div>
       </motion.div>
