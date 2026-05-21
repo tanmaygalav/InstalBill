@@ -411,7 +411,7 @@ export default function DashboardPage() {
               </button>
             </div>
 
-            <div className="bg-white rounded-3xl p-6 shadow-lg shadow-black/5 border border-stone-200">
+            {/* <div className="bg-white rounded-3xl p-6 shadow-lg shadow-black/5 border border-stone-200">
               <h4 className="text-sm font-bold text-[#111827] mb-4">Quick Actions</h4>
               <div className="space-y-2">
                 <button className="w-full text-left px-4 py-3 rounded-xl hover:bg-stone-50 font-medium text-slate-600 text-sm transition-colors border border-transparent hover:border-stone-200 flex justify-between items-center group">
@@ -423,7 +423,7 @@ export default function DashboardPage() {
                   <ArrowUpRight size={16} className="opacity-0 group-hover:opacity-100 text-slate-400 transition-opacity" />
                 </button>
               </div>
-            </div>
+            </div> */}
           </motion.div>
 
         </div>
