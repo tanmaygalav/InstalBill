@@ -44,3 +44,74 @@ InstaBill is a modern, lightweight invoicing application that completely bypasse
 git clone [https://github.com/yourusername/instabill.git](https://github.com/yourusername/instabill.git)
 cd instabill
 npm install
+```
+
+### 2. Set up Supabase Environment Variables
+Create a `.env.local` file in the root directory and add your Supabase project credentials:
+```env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+```
+
+### 3. Database Setup (SQL Schema)
+Go to your Supabase Dashboard -> **SQL Editor** and run the following commands to construct the database, set up authentication, and enforce Row Level Security (RLS):
+
+```sql
+-- 1. Create the invoices table
+CREATE TABLE public.invoices (
+  id uuid DEFAULT gen_random_uuid() PRIMARY KEY,
+  created_at timestamp with time zone DEFAULT timezone('utc'::text, now()) NOT NULL,
+  user_id uuid REFERENCES auth.users(id) NOT NULL,
+  sender_name text NOT NULL,
+  client_email text NOT NULL,
+  upi_id text NOT NULL,
+  total_amount numeric NOT NULL,
+  items jsonb NOT NULL,
+  status text DEFAULT 'pending'::text NOT NULL,
+  utr_number text
+);
+
+-- 2. Enable Row Level Security (RLS)
+ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
+
+-- 3. Create strict security policies
+-- Freelancers can only view their own dashboard data
+CREATE POLICY "Users can view own invoices" ON public.invoices
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- Freelancers can insert new invoices
+CREATE POLICY "Users can insert own invoices" ON public.invoices
+  FOR INSERT WITH CHECK (auth.uid() = user_id);
+
+-- The public client portal can view a specific invoice if they have the exact UUID
+CREATE POLICY "Public can view specific invoice by ID" ON public.invoices
+  FOR SELECT USING (true);
+
+-- The public client portal can update the status/UTR of their specific invoice
+CREATE POLICY "Public can update invoices" ON public.invoices 
+  FOR UPDATE USING (true);
+```
+
+### 4. Enable Realtime (Crucial)
+To enable the live-sync features:
+1. Go to your Supabase Dashboard -> **Database** -> **Publications**.
+2. Find `supabase_realtime`.
+3. Toggle the switch to **ON** for the `invoices` table.
+
+### 5. Run the Application
+```bash
+npm run dev
+```
+Open [http://localhost:3000](http://localhost:3000) in your browser to start generating invoices.
+
+---
+
+## 🌍 Deployment
+
+This project is optimized for deployment on [Vercel](https://vercel.com/). 
+Simply connect your GitHub repository to Vercel, ensure your `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY` are added to the Vercel Environment Variables, and click Deploy.
+
+---
+
+## 📄 License
+This project is licensed under the MIT License.
