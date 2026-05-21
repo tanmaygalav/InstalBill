@@ -3,6 +3,7 @@
 import { useEffect, useState, use } from "react";
 import { supabase } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
+import Image from "next/image";
 import { CheckCircle, ShieldCheck, Check, Loader2, Download, Search } from "lucide-react";
 import toast from "react-hot-toast";
 
@@ -84,24 +85,22 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
   return (
     <div className="min-h-screen bg-[#FEF9F2] text-[#111827] flex flex-col items-center py-12 px-4 sm:px-8 print:bg-white print:py-0 print:px-0">
       
-      <div className="w-full max-w-5xl mb-8 flex items-center gap-2 animate-in fade-in slide-in-from-top-4 duration-700 print:hidden">
-        <div className="w-8 h-8 bg-indigo-600 rounded-xl shadow-md flex items-center justify-center p-1.5"><CheckCircle className="text-white w-full h-full" /></div>
-        <span className="text-xl font-bold tracking-tighter text-[#111827]">InstaBill</span>
-      </div>
-
       <div className="max-w-5xl w-full grid lg:grid-cols-5 gap-10 items-start print:block">
         
         {/* INVOICE DOCUMENT */}
         <div className="lg:col-span-3 bg-white w-full shadow-2xl shadow-black/5 rounded-sm p-8 sm:p-12 flex flex-col relative border border-stone-100 animate-in fade-in slide-in-from-bottom-8 duration-700 print:shadow-none print:border-none print:p-0 print:w-full print:max-w-full">
           
           {/* InstaBill PDF Watermark Logo */}
-          <div className="flex items-center gap-2 mb-10 pb-6 border-b border-stone-100">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-              <CheckCircle className="text-white w-5 h-5" />
-            </div>
-            <span className="text-xl font-bold text-slate-800 tracking-tight">InstaBill</span>
+          <div className="flex items-center gap-2">
+            <Image 
+              src="/logo.png" 
+              alt="InstaBill Logo" 
+              width={32} 
+              height={32} 
+              className="w-8 h-8 rounded-lg object-contain"
+            />
+            <span className="text-xl font-bold tracking-tight text-[#111827]">InstaBill</span>
           </div>
-
           <div className="flex justify-between items-start mb-12">
             <div>
               <h1 className="text-3xl font-light text-slate-300 tracking-wider">INVOICE</h1>

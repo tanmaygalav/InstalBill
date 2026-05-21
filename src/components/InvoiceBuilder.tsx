@@ -1,21 +1,20 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Loader2, CheckCircle, MapPin, Percent } from "lucide-react";
+import { Plus, X, Loader2, MapPin, Percent } from "lucide-react";
+import Image from "next/image"; // Custom Logo Support
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
 
 export default function InvoiceBuilder() {
   const router = useRouter();
+  
+  // --- HYDRATION SAFETY STATE ---
+  const [isMounted, setIsMounted] = useState(false);
+  
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(true);
-
-  const [isMounted, setIsMounted] = useState(false);
-
-  useEffect(() => {
-    setIsMounted(true);
-  }, []);
 
   // Core State
   const [senderName, setSenderName] = useState("");
@@ -23,7 +22,7 @@ export default function InvoiceBuilder() {
   const [clientEmail, setClientEmail] = useState("");
   const [items, setItems] = useState([{ description: "", amount: "" }]);
   
-  // NEW: Setting tracking
+  // Setting tracking
   const [saveAsDefault, setSaveAsDefault] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -34,7 +33,12 @@ export default function InvoiceBuilder() {
   const [showTax, setShowTax] = useState(false);
   const [taxRate, setTaxRate] = useState<number | string>(18);
 
-  // --- NEW: AUTO-FETCH DEFAULTS ON LOAD ---
+  // Mount the component safely to prevent Hydration Mismatch
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
+
+  // Fetch Defaults
   useEffect(() => {
     const fetchDefaults = async () => {
       try {
@@ -53,7 +57,7 @@ export default function InvoiceBuilder() {
           }
         }
       } catch (error) {
-        console.error("No defaults found or error fetching.");
+        console.error("No defaults found.");
       } finally {
         setIsLoadingDefaults(false);
       }
@@ -75,7 +79,7 @@ export default function InvoiceBuilder() {
   const calculatedTax = showTax ? (subtotal * (Number(taxRate) || 0)) / 100 : 0;
   const totalAmount = subtotal + calculatedTax;
 
-  // NEW: Proactive Form Validation (Button Disable Logic)
+  // Validation
   const isFormValid = senderName.trim() !== "" && upiId.trim() !== "" && clientEmail.trim() !== "" && totalAmount > 0;
 
   const handleGenerate = async () => {
@@ -93,7 +97,6 @@ export default function InvoiceBuilder() {
         return;
       }
 
-      // 1. Generate the Invoice
       const { data: invoiceData, error: invoiceError } = await supabase.from("invoices").insert([
         {
           user_id: user.id,
@@ -111,7 +114,6 @@ export default function InvoiceBuilder() {
 
       if (invoiceError) throw invoiceError;
 
-      // 2. NEW: Save Defaults Silently in the background if checked
       if (saveAsDefault) {
         await supabase.from("user_settings").upsert({
           user_id: user.id,
@@ -145,7 +147,6 @@ export default function InvoiceBuilder() {
             <input type="text" placeholder="Your Name / Business" value={senderName} onChange={(e) => setSenderName(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none" />
             <input type="text" placeholder="Your UPI ID for Payment (e.g. brand@paytm)" value={upiId} onChange={(e) => setUpiId(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none" />
             
-            {/* NEW: Save Defaults Checkbox */}
             {userId && (
               <div className="flex items-center gap-2 pt-1 pl-1">
                 <input 
@@ -167,7 +168,6 @@ export default function InvoiceBuilder() {
           <h2 className="font-bold text-[#111827] mb-4">Client Details</h2>
           <input type="email" placeholder="Client Email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none mb-6" />
 
-          {/* ADVANCED TOGGLES */}
           <div className="grid grid-cols-2 gap-4 mb-6">
             <div className={`p-4 rounded-2xl border transition-all cursor-pointer ${showAddresses ? 'border-indigo-600 bg-indigo-50/50' : 'border-stone-200 hover:border-stone-300'}`} onClick={() => setShowAddresses(!showAddresses)}>
               <div className="flex justify-between items-center mb-1">
@@ -223,10 +223,11 @@ export default function InvoiceBuilder() {
           </div>
         </div>
 
-        {/* UPDATED: Smart Disabled State */}
+        {/* HYDRATION SAFE BUTTON */}
         <button 
           onClick={handleGenerate} 
           disabled={!isMounted || isGenerating || !isFormValid} 
+          suppressHydrationWarning
           className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white p-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
         >
           {isGenerating ? <Loader2 className="animate-spin" size={20} /> : "Generate Payment Link"}
@@ -236,10 +237,15 @@ export default function InvoiceBuilder() {
       {/* RIGHT COLUMN: LIVE PREVIEW */}
       <div className="sticky top-24 bg-white shadow-2xl shadow-black/5 rounded-sm p-8 sm:p-12 border border-stone-100 hidden lg:block">
         
+        {/* CUSTOM LOGO (Make sure logo.png is in your /public folder) */}
         <div className="flex items-center gap-2 mb-10 pb-6 border-b border-stone-100">
-          <div className="w-6 h-6 bg-indigo-600 rounded flex items-center justify-center">
-            <CheckCircle className="text-white w-4 h-4" />
-          </div>
+          <Image 
+            src="/logo.png" 
+            alt="InstaBill Logo" 
+            width={32} 
+            height={32} 
+            className="w-8 h-8 rounded-lg object-contain"
+          />
           <span className="text-lg font-bold text-slate-800 tracking-tight">InstaBill</span>
         </div>
 
@@ -250,7 +256,8 @@ export default function InvoiceBuilder() {
           </div>
           <div className="text-right">
             <p className="text-[10px] font-bold text-slate-400 mb-1 uppercase tracking-wider">Date</p>
-            <p className="font-bold text-[#111827]">
+            {/* HYDRATION SAFE DATE */}
+            <p className="font-bold text-[#111827]" suppressHydrationWarning>
               {isMounted ? new Date().toLocaleDateString() : "---"}
             </p>
           </div>
@@ -317,4 +324,3 @@ export default function InvoiceBuilder() {
     </div>
   );
 }
-

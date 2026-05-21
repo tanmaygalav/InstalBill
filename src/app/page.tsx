@@ -1,7 +1,7 @@
 import InvoiceBuilder from "@/components/InvoiceBuilder";
 import Link from "next/link";
 import { CheckCircle, LayoutDashboard } from "lucide-react";
-
+import Image from "next/image";
 export default function HomePage() {
   return (
     <div className="min-h-screen bg-[#FEF9F2] text-[#111827]">
@@ -12,11 +12,15 @@ export default function HomePage() {
           
           {/* Logo Section */}
           <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-indigo-600 rounded-lg shadow-md shadow-indigo-500/20 flex items-center justify-center">
-              <CheckCircle className="text-white" size={18} />
-            </div>
+            <Image 
+              src="/logo.png" 
+              alt="InstaBill Logo" 
+              width={32} 
+              height={32} 
+              className="w-8 h-8 rounded-lg object-contain"
+            />
             <span className="text-xl font-bold tracking-tight text-[#111827]">InstaBill</span>
-          </div>
+          </div>  
           
           {/* Action Section */}
           <div className="flex items-center gap-4">
