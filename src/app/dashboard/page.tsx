@@ -392,7 +392,7 @@ export default function DashboardPage() {
 
           {/* RIGHT SIDEBAR: UPSELL PANELS */}
           <motion.div variants={itemVariants} className="space-y-6">
-            <div className="bg-gradient-to-br from-indigo-900 to-[#111827] rounded-3xl p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
+            {/* <div className="bg-gradient-to-br from-indigo-900 to-[#111827] rounded-3xl p-8 text-white shadow-xl shadow-indigo-900/20 relative overflow-hidden">
               <div className="absolute top-0 right-0 w-32 h-32 bg-indigo-500/20 rounded-full blur-3xl transform translate-x-10 -translate-y-10"></div>
               
               <div className="flex items-center gap-2 mb-4 relative z-10">
@@ -409,7 +409,7 @@ export default function DashboardPage() {
                 Upgrade Now 
                 <span className="bg-indigo-100 text-indigo-800 text-xs px-2 py-1 rounded-md">₹199/mo</span>
               </button>
-            </div>
+            </div> */}
 
             {/* <div className="bg-white rounded-3xl p-6 shadow-lg shadow-black/5 border border-stone-200">
               <h4 className="text-sm font-bold text-[#111827] mb-4">Quick Actions</h4>
