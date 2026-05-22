@@ -1,5 +1,29 @@
 import "./globals.css";
 import { Toaster } from "react-hot-toast";
+import type { Metadata } from "next";
+
+// --- GLOBAL SEO METADATA ---
+export const metadata: Metadata = {
+  title: "InstaBill | Free UPI Invoice Generator for Freelancers",
+  description: "Create professional invoices in seconds. Auto-verify UPI payments and UTR numbers instantly. 100% free for Indian freelancers, developers, and agencies.",
+  keywords: ["UPI invoice generator", "freelance billing india", "UTR verification", "free invoice maker", "InstaBill"],
+  openGraph: {
+    title: "InstaBill | Free UPI Invoice Generator",
+    description: "Create professional invoices in seconds. Auto-verify UPI payments instantly.",
+    url: "https://instabill.live",
+    siteName: "InstaBill",
+    images: [
+      {
+        url: "/logo.png", 
+        width: 800,
+        height: 600,
+        alt: "InstaBill Logo",
+      },
+    ],
+    locale: "en_IN",
+    type: "website",
+  },
+};
 
 export default function RootLayout({
   children,
