@@ -4,7 +4,7 @@ import { useEffect, useState, use } from "react";
 import Image from "next/image"; 
 import { supabase } from "@/lib/supabase";
 import { QRCodeSVG } from "qrcode.react";
-import { CheckCircle, ShieldCheck, Check, Loader2, Download, Search, Smartphone } from "lucide-react";
+import { CheckCircle, ShieldCheck, Check, Loader2, Download, Search, Smartphone, Copy, Lock, CheckCircle2 } from "lucide-react";
 import toast from "react-hot-toast";
 
 export default function PublicInvoicePage({ params }: { params: Promise<{ id: string }> | { id: string }; }) {
@@ -15,6 +15,9 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
   const [isLoading, setIsLoading] = useState(true);
   const [isUpdating, setIsUpdating] = useState(false);
   const [utrNumber, setUtrNumber] = useState("");
+  
+  // NEW: State for One-Click Copy
+  const [hasCopiedUpi, setHasCopiedUpi] = useState(false);
 
   useEffect(() => {
     let channel: any;
@@ -68,7 +71,42 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
 
   const handleDownloadPDF = () => window.print();
 
-  if (isLoading) return <div className="min-h-screen bg-[#FEF9F2] flex items-center justify-center text-[#111827]"><Loader2 className="animate-spin text-indigo-600" size={32} /></div>;
+  // NEW: One-Click Copy Function
+  const handleCopyUpi = () => {
+    if (!invoice?.upi_id) return;
+    navigator.clipboard.writeText(invoice.upi_id);
+    setHasCopiedUpi(true);
+    toast.success("UPI ID Copied!");
+    setTimeout(() => setHasCopiedUpi(false), 2000);
+  };
+
+  // --- NEW: SKELETON LOADER UI ---
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-[#FEF9F2] flex flex-col items-center py-6 sm:py-12 px-4 sm:px-8">
+        <div className="w-full max-w-5xl mb-6 sm:mb-8 flex items-center gap-2 animate-pulse">
+          <div className="w-8 h-8 rounded-lg bg-stone-200"></div>
+          <div className="h-6 w-24 bg-stone-200 rounded"></div>
+        </div>
+        <div className="max-w-5xl w-full grid lg:grid-cols-5 gap-6 lg:gap-10 items-start">
+          <div className="lg:col-span-3 bg-white w-full rounded-2xl sm:rounded-sm p-6 sm:p-12 border border-stone-100 h-[600px] animate-pulse">
+            <div className="h-8 w-32 bg-stone-100 rounded mb-12"></div>
+            <div className="flex justify-between mb-8">
+              <div className="h-10 w-40 bg-stone-100 rounded"></div>
+              <div className="h-10 w-24 bg-stone-100 rounded"></div>
+            </div>
+            <div className="space-y-4">
+              <div className="h-6 bg-stone-50 rounded w-full"></div>
+              <div className="h-6 bg-stone-50 rounded w-full"></div>
+              <div className="h-6 bg-stone-50 rounded w-3/4"></div>
+            </div>
+          </div>
+          <div className="lg:col-span-2 bg-white rounded-3xl p-6 sm:p-8 border border-stone-200 h-[450px] animate-pulse"></div>
+        </div>
+      </div>
+    );
+  }
+
   if (!invoice) return <div className="min-h-screen bg-[#FEF9F2] flex items-center justify-center text-[#111827] font-medium">Invoice not found.</div>;
 
   const upiString = `upi://pay?pa=${invoice.upi_id}&am=${invoice.total_amount}&cu=INR`;
@@ -81,7 +119,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
   const displayTaxRate = invoice.tax_rate || (subtotal > 0 ? Math.round((actualTaxAmount / subtotal) * 100) : 0);
 
   return (
-    // Adjusted py-12 to py-6 on mobile for better top spacing
     <div className="min-h-screen bg-[#FEF9F2] text-[#111827] flex flex-col items-center py-6 sm:py-12 px-4 sm:px-8 print:bg-white print:py-0 print:px-0">
       
       {/* BRAND HEADER */}
@@ -90,11 +127,9 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
         <span className="text-xl font-bold tracking-tighter text-[#111827]">InstaBill</span>
       </div>
 
-      {/* Adjusted gap-10 to gap-6 on mobile */}
       <div className="max-w-5xl w-full grid lg:grid-cols-5 gap-6 lg:gap-10 items-start print:block">
         
         {/* INVOICE DOCUMENT */}
-        {/* Adjusted padding from p-8 to p-6 sm:p-12 */}
         <div className="lg:col-span-3 bg-white w-full shadow-2xl shadow-black/5 rounded-2xl sm:rounded-sm p-6 sm:p-12 flex flex-col relative border border-stone-100 animate-in fade-in slide-in-from-bottom-8 duration-700 print:shadow-none print:border-none print:p-0 print:w-full print:max-w-full">
           
           <div className="flex items-center gap-2 mb-8 sm:mb-10 pb-6 border-b border-stone-100">
@@ -113,7 +148,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             </div>
           </div>
           
-          {/* Adjusted gap-10 to gap-6 on mobile to prevent squishing */}
           <div className="grid grid-cols-2 gap-6 sm:gap-10 mb-8">
             <div>
               <p className="text-[10px] sm:text-[11.5px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">From</p>
@@ -121,7 +155,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
             </div>
             <div className="text-right">
               <p className="text-[10px] sm:text-[11.5px] font-bold text-slate-400 mb-1.5 uppercase tracking-wider">Bill To</p>
-              {/* Added break-all for mobile so long emails don't break the layout */}
               <p className="text-base sm:text-xl font-medium text-slate-800 tracking-tight break-all sm:break-normal">{invoice.client_email}</p>
             </div>
           </div>
@@ -145,14 +178,12 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
           
           <div className="flex-grow">
             <div className="grid grid-cols-5 border-b-2 border-stone-100 pb-3 mb-4">
-              {/* Adjusted columns: 3 for desc, 2 for amount on mobile */}
               <p className="col-span-3 sm:col-span-4 font-bold text-slate-400 text-[10px] sm:text-xs tracking-wider uppercase">Description</p>
               <p className="col-span-2 sm:col-span-1 text-right font-bold text-slate-400 text-[10px] sm:text-xs tracking-wider uppercase">Amount</p>
             </div>
             <div className="space-y-4 mb-8">
               {invoice.items && invoice.items.map((item: any, i: number) => (
                 <div key={i} className="grid grid-cols-5 items-start sm:items-center">
-                  {/* Smaller text on mobile */}
                   <p className="col-span-3 sm:col-span-4 text-sm sm:text-base text-slate-700 font-medium leading-relaxed pr-2">{item.description}</p>
                   <p className="col-span-2 sm:col-span-1 text-right text-[#111827] font-semibold text-base sm:text-lg tracking-tight pt-0.5 sm:pt-0">₹{item.amount}</p>
                 </div>
@@ -183,7 +214,6 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 )}
               </div>
               <div className="flex flex-col items-start sm:items-end w-full sm:w-auto">
-                {/* Dynamically shrink extreme font size on mobile */}
                 <span className="text-3xl sm:text-4xl font-extrabold text-[#111827] tracking-tight">
                   ₹{Number(invoice.total_amount).toLocaleString('en-IN', { maximumFractionDigits: 2 })}
                 </span>
@@ -225,13 +255,33 @@ export default function PublicInvoicePage({ params }: { params: Promise<{ id: st
                 </div>
               )}
 
-              <div className="bg-stone-50 p-4 sm:p-5 rounded-3xl border-2 border-stone-100 shadow-inner mb-4 sm:mb-6 relative w-full flex items-center justify-center">
+              <div className="bg-stone-50 p-4 sm:p-5 rounded-3xl border-2 border-stone-100 shadow-inner mb-4 relative w-full flex items-center justify-center">
                 <div className={`bg-white p-2 sm:p-3 rounded-2xl shadow-sm transition-all duration-500 ${isPendingVerification ? "blur-md opacity-40 grayscale pointer-events-none" : ""}`}>
                   <QRCodeSVG value={upiString} size={180} level="H" includeMargin={false as any} fgColor="#111827" />
                 </div>
                 {isPendingVerification && <div className="absolute inset-0 flex items-center justify-center"><div className="bg-amber-500 text-white p-4 rounded-full shadow-xl"><Loader2 className="animate-spin" size={36} strokeWidth={3} /></div></div>}
               </div>
-              <p className="text-xs sm:text-sm text-slate-500 font-medium">Secure transfer to <span className="font-bold text-[#111827]">{invoice.sender_name}</span></p>
+
+              {/* NEW: ONE-CLICK COPY BUTTON */}
+              {!isPendingVerification && (
+                <button 
+                  onClick={handleCopyUpi}
+                  className="flex items-center gap-2 mb-6 px-4 py-2 rounded-full bg-indigo-50 text-indigo-600 hover:bg-indigo-100 hover:text-indigo-700 transition-colors text-xs font-bold uppercase tracking-wider"
+                >
+                  {hasCopiedUpi ? <CheckCircle2 size={14} /> : <Copy size={14} />}
+                  {hasCopiedUpi ? "Copied UPI ID!" : "Copy UPI ID"}
+                </button>
+              )}
+
+              {/* NEW: TRUST SIGNALS & BADGES */}
+              <div className="w-full pt-5 border-t border-stone-100 mt-2">
+                <div className="flex items-center justify-center gap-1.5 text-slate-500 mb-1">
+                  <Lock size={14} />
+                  <span className="text-[11px] font-bold uppercase tracking-wider">Secured via UPI Network</span>
+                </div>
+                <p className="text-[10px] text-slate-400 font-medium">100% direct bank-to-bank transfer.</p>
+              </div>
+
             </div>
           )}
           
