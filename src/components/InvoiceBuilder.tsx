@@ -133,19 +133,23 @@ export default function InvoiceBuilder() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 md:px-8 grid lg:grid-cols-2 gap-12 items-start">
+    // REMOVED px-4 md:px-8 here because it was double-padding the form!
+    // Reduced gap-12 to gap-6 on mobile
+    <div className="w-full grid lg:grid-cols-2 gap-6 lg:gap-12 items-start">
       
       {/* LEFT COLUMN: THE FORM */}
-      <div className="space-y-6">
+      <div className="space-y-4 sm:space-y-6">
         
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+        {/* Adjusted padding from p-6 to p-4 sm:p-6 */}
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-stone-200">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-[#111827]">Your Details</h2>
             {isLoadingDefaults && <Loader2 className="animate-spin text-slate-300" size={16} />}
           </div>
-          <div className="space-y-4">
-            <input type="text" placeholder="Your Name / Business" value={senderName} onChange={(e) => setSenderName(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none" />
-            <input type="text" placeholder="Your UPI ID for Payment (e.g. brand@paytm)" value={upiId} onChange={(e) => setUpiId(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none" />
+          <div className="space-y-3 sm:space-y-4">
+            {/* Added text-sm sm:text-base to prevent iOS from zooming in on inputs */}
+            <input type="text" placeholder="Your Name / Business" value={senderName} onChange={(e) => setSenderName(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm sm:text-base" />
+            <input type="text" placeholder="Your UPI ID (e.g. brand@paytm)" value={upiId} onChange={(e) => setUpiId(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm sm:text-base" />
             
             {userId && (
               <div className="flex items-center gap-2 pt-1 pl-1">
@@ -156,7 +160,7 @@ export default function InvoiceBuilder() {
                   onChange={(e) => setSaveAsDefault(e.target.checked)} 
                   className="rounded border-stone-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer" 
                 />
-                <label htmlFor="saveDefaults" className="text-xs font-medium text-slate-500 cursor-pointer select-none">
+                <label htmlFor="saveDefaults" className="text-[11px] sm:text-xs font-medium text-slate-500 cursor-pointer select-none">
                   Save these details as my default
                 </label>
               </div>
@@ -164,60 +168,64 @@ export default function InvoiceBuilder() {
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-3xl shadow-sm border border-stone-200">
+        <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-stone-200">
           <h2 className="font-bold text-[#111827] mb-4">Client Details</h2>
-          <input type="email" placeholder="Client Email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none mb-6" />
+          <input type="email" placeholder="Client Email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none mb-5 sm:mb-6 text-sm sm:text-base" />
 
-          <div className="grid grid-cols-2 gap-4 mb-6">
-            <div className={`p-4 rounded-2xl border transition-all cursor-pointer ${showAddresses ? 'border-indigo-600 bg-indigo-50/50' : 'border-stone-200 hover:border-stone-300'}`} onClick={() => setShowAddresses(!showAddresses)}>
+          {/* Adjusted gap-4 to gap-3 on mobile */}
+          <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
+            <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${showAddresses ? 'border-indigo-600 bg-indigo-50/50' : 'border-stone-200 hover:border-stone-300'}`} onClick={() => setShowAddresses(!showAddresses)}>
               <div className="flex justify-between items-center mb-1">
                 <MapPin size={18} className={showAddresses ? "text-indigo-600" : "text-slate-400"} />
                 <div className={`w-8 h-4 rounded-full relative transition-colors ${showAddresses ? 'bg-indigo-600' : 'bg-stone-300'}`}>
                   <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showAddresses ? 'left-4.5 right-0.5 translate-x-3.5' : 'left-0.5'}`}></div>
                 </div>
               </div>
-              <p className={`text-sm font-bold mt-2 ${showAddresses ? 'text-indigo-900' : 'text-slate-700'}`}>Addresses</p>
+              <p className={`text-xs sm:text-sm font-bold mt-2 ${showAddresses ? 'text-indigo-900' : 'text-slate-700'}`}>Addresses</p>
             </div>
             
-            <div className={`p-4 rounded-2xl border transition-all cursor-pointer ${showTax ? 'border-indigo-600 bg-indigo-50/50' : 'border-stone-200 hover:border-stone-300'}`} onClick={() => setShowTax(!showTax)}>
+            <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${showTax ? 'border-indigo-600 bg-indigo-50/50' : 'border-stone-200 hover:border-stone-300'}`} onClick={() => setShowTax(!showTax)}>
               <div className="flex justify-between items-center mb-1">
                 <Percent size={18} className={showTax ? "text-indigo-600" : "text-slate-400"} />
                 <div className={`w-8 h-4 rounded-full relative transition-colors ${showTax ? 'bg-indigo-600' : 'bg-stone-300'}`}>
                   <div className={`absolute top-0.5 w-3 h-3 rounded-full bg-white transition-all ${showTax ? 'left-4.5 right-0.5 translate-x-3.5' : 'left-0.5'}`}></div>
                 </div>
               </div>
-              <p className={`text-sm font-bold mt-2 ${showTax ? 'text-indigo-900' : 'text-slate-700'}`}>Tax / GST</p>
+              <p className={`text-xs sm:text-sm font-bold mt-2 ${showTax ? 'text-indigo-900' : 'text-slate-700'}`}>Tax / GST</p>
             </div>
           </div>
 
           {showAddresses && (
-            <div className="grid grid-cols-2 gap-4 mb-6 animate-in fade-in slide-in-from-top-2">
-              <textarea placeholder="Billing Address..." value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none resize-none h-24" />
-              <textarea placeholder="Shipping Address..." value={shippingAddress} onChange={(e) => setShippingAddress(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none resize-none h-24" />
+            // CRITICAL FIX: grid-cols-1 on mobile, grid-cols-2 on sm to prevent tiny text areas!
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 animate-in fade-in slide-in-from-top-2">
+              <textarea placeholder="Billing Address..." value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none resize-none h-20 sm:h-24" />
+              <textarea placeholder="Shipping Address..." value={shippingAddress} onChange={(e) => setShippingAddress(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none resize-none h-20 sm:h-24" />
             </div>
           )}
 
           {showTax && (
-            <div className="mb-6 animate-in fade-in slide-in-from-top-2">
-              <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tax Rate (%)</label>
-              <input type="number" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none" />
+            <div className="mb-5 sm:mb-6 animate-in fade-in slide-in-from-top-2">
+              <label className="block text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider mb-2">Tax Rate (%)</label>
+              <input type="number" value={taxRate} onChange={(e) => setTaxRate(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm sm:text-base" />
             </div>
           )}
 
-          <div className="flex justify-between items-center mb-4">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Services / Products</label>
-            <button onClick={handleAddItem} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 transition-colors"><Plus size={14} /> Add Item</button>
+          <div className="flex justify-between items-center mb-3 sm:mb-4">
+            <label className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-wider">Services / Products</label>
+            <button onClick={handleAddItem} className="text-xs bg-stone-100 hover:bg-stone-200 text-stone-700 px-3 py-1.5 rounded-lg font-semibold flex items-center gap-1 transition-colors"><Plus size={14} /> Add</button>
           </div>
           
           <div className="space-y-3">
             {items.map((item, index) => (
               <div key={index} className="flex gap-2 items-center">
-                <input type="text" placeholder="Description" value={item.description} onChange={(e) => handleItemChange(index, "description", e.target.value)} className="flex-grow p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none" />
-                <div className="relative w-32 flex-shrink-0">
+                <input type="text" placeholder="Desc" value={item.description} onChange={(e) => handleItemChange(index, "description", e.target.value)} className="flex-grow p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none w-1/2" />
+                {/* Reduced w-32 to w-24 on mobile so prices fit comfortably */}
+                <div className="relative w-24 sm:w-32 flex-shrink-0">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
-                  <input type="number" placeholder="0" value={item.amount} onChange={(e) => handleItemChange(index, "amount", e.target.value)} className="w-full pl-8 pr-3 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none" />
+                  <input type="number" placeholder="0" value={item.amount} onChange={(e) => handleItemChange(index, "amount", e.target.value)} className="w-full pl-7 sm:pl-8 pr-2 sm:pr-3 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none" />
                 </div>
-                {items.length > 1 && <button onClick={() => handleRemoveItem(index)} className="p-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"><X size={18} /></button>}
+                {/* Reduced padding on the X button for phones */}
+                {items.length > 1 && <button onClick={() => handleRemoveItem(index)} className="p-2 sm:p-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"><X size={18} /></button>}
               </div>
             ))}
           </div>
@@ -228,7 +236,7 @@ export default function InvoiceBuilder() {
           onClick={handleGenerate} 
           disabled={!isMounted || isGenerating || !isFormValid} 
           suppressHydrationWarning
-          className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white p-4 rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98]"
+          className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] text-sm sm:text-base"
         >
           {isGenerating ? <Loader2 className="animate-spin" size={20} /> : "Generate Payment Link"}
         </button>
@@ -266,11 +274,11 @@ export default function InvoiceBuilder() {
         <div className="grid grid-cols-2 gap-8 mb-10">
           <div>
             <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider">From</p>
-            <p className="font-bold text-[#111827]">{senderName || "Your Business"}</p>
+            <p className="font-bold text-[#111827] truncate pr-2">{senderName || "Your Business"}</p>
           </div>
           <div className="text-right">
             <p className="text-[10px] font-bold text-slate-400 mb-2 uppercase tracking-wider">Bill To</p>
-            <p className="font-medium text-slate-800">{clientEmail || "client@company.com"}</p>
+            <p className="font-medium text-slate-800 truncate pl-2">{clientEmail || "client@company.com"}</p>
           </div>
         </div>
 
@@ -295,7 +303,7 @@ export default function InvoiceBuilder() {
         <div className="space-y-3 mb-8 min-h-[100px]">
           {items.map((item, i) => (
             <div key={i} className="grid grid-cols-4 items-center">
-              <p className="col-span-3 text-sm text-slate-700">{item.description || "—"}</p>
+              <p className="col-span-3 text-sm text-slate-700 pr-4">{item.description || "—"}</p>
               <p className="text-right text-sm font-semibold text-[#111827]">₹{item.amount || "0"}</p>
             </div>
           ))}
