@@ -1,8 +1,8 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Plus, X, Loader2, MapPin, Percent } from "lucide-react";
-import Image from "next/image"; // Custom Logo Support
+import { Plus, X, Loader2, MapPin, Percent, CheckCircle2, Copy, ExternalLink, RefreshCw } from "lucide-react";
+import Image from "next/image"; 
 import { supabase } from "@/lib/supabase";
 import toast from "react-hot-toast";
 import { useRouter } from "next/navigation";
@@ -15,6 +15,9 @@ export default function InvoiceBuilder() {
   
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(true);
+
+  // NEW: State to hold the link and stop the redirect
+  const [generatedLink, setGeneratedLink] = useState<string | null>(null);
 
   // Core State
   const [senderName, setSenderName] = useState("");
@@ -74,6 +77,14 @@ export default function InvoiceBuilder() {
     setItems(newItems);
   };
 
+  // NEW: Reset function to quickly bill the next client
+  const handleReset = () => {
+    setGeneratedLink(null);
+    setClientEmail("");
+    setItems([{ description: "", amount: "" }]);
+    // Note: We deliberately KEEP the senderName, upiId, and tax settings so they don't have to retype them!
+  };
+
   // Math Calculations
   const subtotal = items.reduce((sum, item) => sum + (Number(item.amount) || 0), 0);
   const calculatedTax = showTax ? (subtotal * (Number(taxRate) || 0)) / 100 : 0;
@@ -122,8 +133,13 @@ export default function InvoiceBuilder() {
         });
       }
       
-      toast.success("Invoice generated securely!");
-      router.push(`/invoice/${invoiceData.id}`);
+      // NEW BEHAVIOR: Copy to clipboard and show success UI instead of redirecting
+      const finalLink = `${window.location.origin}/invoice/${invoiceData.id}`;
+      await navigator.clipboard.writeText(finalLink);
+      setGeneratedLink(finalLink);
+      
+      toast.success("Link copied to clipboard!");
+      
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate invoice.");
@@ -133,21 +149,17 @@ export default function InvoiceBuilder() {
   };
 
   return (
-    // REMOVED px-4 md:px-8 here because it was double-padding the form!
-    // Reduced gap-12 to gap-6 on mobile
     <div className="w-full grid lg:grid-cols-2 gap-6 lg:gap-12 items-start">
       
       {/* LEFT COLUMN: THE FORM */}
       <div className="space-y-4 sm:space-y-6">
         
-        {/* Adjusted padding from p-6 to p-4 sm:p-6 */}
         <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-stone-200">
           <div className="flex justify-between items-center mb-4">
             <h2 className="font-bold text-[#111827]">Your Details</h2>
             {isLoadingDefaults && <Loader2 className="animate-spin text-slate-300" size={16} />}
           </div>
           <div className="space-y-3 sm:space-y-4">
-            {/* Added text-sm sm:text-base to prevent iOS from zooming in on inputs */}
             <input type="text" placeholder="Your Name / Business" value={senderName} onChange={(e) => setSenderName(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm sm:text-base" />
             <input type="text" placeholder="Your UPI ID (e.g. brand@paytm)" value={upiId} onChange={(e) => setUpiId(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm sm:text-base" />
             
@@ -172,7 +184,6 @@ export default function InvoiceBuilder() {
           <h2 className="font-bold text-[#111827] mb-4">Client Details</h2>
           <input type="email" placeholder="Client Email" value={clientEmail} onChange={(e) => setClientEmail(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none mb-5 sm:mb-6 text-sm sm:text-base" />
 
-          {/* Adjusted gap-4 to gap-3 on mobile */}
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
             <div className={`p-3 sm:p-4 rounded-xl sm:rounded-2xl border transition-all cursor-pointer ${showAddresses ? 'border-indigo-600 bg-indigo-50/50' : 'border-stone-200 hover:border-stone-300'}`} onClick={() => setShowAddresses(!showAddresses)}>
               <div className="flex justify-between items-center mb-1">
@@ -196,7 +207,6 @@ export default function InvoiceBuilder() {
           </div>
 
           {showAddresses && (
-            // CRITICAL FIX: grid-cols-1 on mobile, grid-cols-2 on sm to prevent tiny text areas!
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6 animate-in fade-in slide-in-from-top-2">
               <textarea placeholder="Billing Address..." value={billingAddress} onChange={(e) => setBillingAddress(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none resize-none h-20 sm:h-24" />
               <textarea placeholder="Shipping Address..." value={shippingAddress} onChange={(e) => setShippingAddress(e.target.value)} className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none resize-none h-20 sm:h-24" />
@@ -219,30 +229,69 @@ export default function InvoiceBuilder() {
             {items.map((item, index) => (
               <div key={index} className="flex gap-2 items-center">
                 <input type="text" placeholder="Desc" value={item.description} onChange={(e) => handleItemChange(index, "description", e.target.value)} className="flex-grow p-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none w-1/2" />
-                {/* Reduced w-32 to w-24 on mobile so prices fit comfortably */}
                 <div className="relative w-24 sm:w-32 flex-shrink-0">
                   <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-medium">₹</span>
                   <input type="number" placeholder="0" value={item.amount} onChange={(e) => handleItemChange(index, "amount", e.target.value)} className="w-full pl-7 sm:pl-8 pr-2 sm:pr-3 py-3 bg-stone-50 border border-stone-200 rounded-xl text-sm outline-none" />
                 </div>
-                {/* Reduced padding on the X button for phones */}
                 {items.length > 1 && <button onClick={() => handleRemoveItem(index)} className="p-2 sm:p-3 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-colors"><X size={18} /></button>}
               </div>
             ))}
           </div>
         </div>
 
-        {/* HYDRATION SAFE BUTTON */}
-        <button 
-          onClick={handleGenerate} 
-          disabled={!isMounted || isGenerating || !isFormValid} 
-          suppressHydrationWarning
-          className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] text-sm sm:text-base"
-        >
-          {isGenerating ? <Loader2 className="animate-spin" size={20} /> : "Generate Payment Link"}
-        </button>
+        {/* DYNAMIC ACTION AREA: Shows Button OR Success Card */}
+        {!generatedLink ? (
+          <button 
+            onClick={handleGenerate} 
+            disabled={!isMounted || isGenerating || !isFormValid} 
+            suppressHydrationWarning
+            className="w-full bg-indigo-600 hover:bg-indigo-700 disabled:bg-slate-300 disabled:text-slate-500 disabled:cursor-not-allowed text-white p-3.5 sm:p-4 rounded-xl sm:rounded-2xl flex items-center justify-center gap-2 font-bold shadow-lg shadow-indigo-200 transition-all active:scale-[0.98] text-sm sm:text-base"
+          >
+            {isGenerating ? <Loader2 className="animate-spin" size={20} /> : "Generate Payment Link"}
+          </button>
+        ) : (
+          <div className="bg-green-50 p-5 sm:p-6 rounded-2xl sm:rounded-3xl border border-green-200 animate-in fade-in zoom-in-95 duration-300 flex flex-col gap-4 shadow-lg shadow-green-100">
+            <div className="flex items-center gap-3 text-green-700">
+              <CheckCircle2 size={24} className="text-green-600" />
+              <h3 className="font-bold text-lg tracking-tight">Ready to send!</h3>
+            </div>
+            <p className="text-sm text-green-800 font-medium">Your payment link has been copied to your clipboard. Paste it directly to your client.</p>
+            
+            <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-green-100 shadow-sm">
+              <input type="text" readOnly value={generatedLink} className="flex-grow bg-transparent text-sm font-mono text-slate-500 px-2 outline-none" />
+              <button 
+                onClick={() => { 
+                  navigator.clipboard.writeText(generatedLink); 
+                  toast.success("Copied again!"); 
+                }} 
+                className="p-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg transition-colors"
+                title="Copy Link"
+              >
+                <Copy size={16} />
+              </button>
+            </div>
+            
+            <div className="flex gap-3 mt-2">
+              <a 
+                href={generatedLink} 
+                target="_blank" 
+                rel="noopener noreferrer" 
+                className="flex-1 bg-white border border-green-200 text-green-700 hover:bg-green-100 py-3 rounded-xl flex justify-center items-center gap-2 font-bold text-sm transition-colors shadow-sm"
+              >
+                <ExternalLink size={16} /> Preview
+              </a>
+              <button 
+                onClick={handleReset} 
+                className="flex-1 bg-green-600 text-white hover:bg-green-700 py-3 rounded-xl flex justify-center items-center gap-2 font-bold text-sm transition-colors shadow-md shadow-green-200 active:scale-[0.98]"
+              >
+                <RefreshCw size={16} /> New Client
+              </button>
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* RIGHT COLUMN: LIVE PREVIEW */}
+      {/* RIGHT COLUMN: LIVE PREVIEW (Unchanged) */}
       <div className="sticky top-24 bg-white shadow-2xl shadow-black/5 rounded-sm p-8 sm:p-12 border border-stone-100 hidden lg:block">
         
         {/* CUSTOM LOGO (Make sure logo.png is in your /public folder) */}
