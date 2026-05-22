@@ -374,108 +374,120 @@ export default function DashboardPage() {
                     <motion.div 
                       key={inv.id}
                       whileHover={{ backgroundColor: "rgba(245, 245, 244, 0.5)" }}
-                      className="p-5 flex flex-col sm:flex-row sm:items-center justify-between transition-colors group gap-4 sm:gap-0"
+                      className="p-5 flex flex-col transition-colors group"
                     >
-                      <div className="flex items-start sm:items-center gap-4 w-full">
-                        <div className={`p-3 rounded-2xl flex-shrink-0 mt-1 sm:mt-0 ${isPaid ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
-                          {isPaid ? <ArrowUpRight size={20} /> : <Clock size={20} />}
-                        </div>
-                        <div className="flex-grow">
-                          <p className="font-bold text-[#111827] group-hover:text-indigo-600 transition-colors truncate max-w-[200px] md:max-w-[300px]">
-                            {inv.client_email}
-                          </p>
-                          <div className="flex items-center gap-2 mt-0.5">
-                            <span className="text-xs font-mono text-slate-400 font-medium">#{inv.id.split('-')[0]}</span>
-                            <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                            <span className="text-xs text-slate-500 font-medium">{new Date(inv.created_at).toLocaleDateString()}</span>
+                      {/* TOP ROW: Main Invoice Details */}
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
+                        
+                        {/* LEFT: Icon & Info */}
+                        <div className="flex items-start sm:items-center gap-4 w-full">
+                          <div className={`p-3 rounded-2xl flex-shrink-0 mt-1 sm:mt-0 ${isPaid ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600'}`}>
+                            {isPaid ? <ArrowUpRight size={20} /> : <Clock size={20} />}
                           </div>
+                          <div className="flex-grow">
+                            <p className="font-bold text-[#111827] group-hover:text-indigo-600 transition-colors truncate max-w-[200px] md:max-w-[300px]">
+                              {inv.client_email}
+                            </p>
+                            <div className="flex items-center gap-2 mt-0.5">
+                              <span className="text-xs font-mono text-slate-400 font-medium">#{inv.id.split('-')[0]}</span>
+                              <span className="w-1 h-1 rounded-full bg-stone-300"></span>
+                              <span className="text-xs text-slate-500 font-medium">{new Date(inv.created_at).toLocaleDateString()}</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* RIGHT: Price, Status Pill, and Menu */}
+                        <div className="text-left sm:text-right flex flex-col sm:items-end w-full sm:w-auto pl-14 sm:pl-0 mt-2 sm:mt-0">
+                          <div className="flex items-center justify-between sm:justify-end gap-4 w-full">
+                            <div className="flex flex-col items-start sm:items-end">
+                              <p className="font-bold text-[#111827] text-lg tracking-tight">₹{Number(inv.total_amount).toLocaleString('en-IN')}</p>
+                              
+                              {/* SHARPENED STATUS PILL */}
+                              <span className={`text-[9.5px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md sm:rounded-full inline-flex items-center justify-center whitespace-nowrap mt-1 border ${
+                                isPaid 
+                                  ? 'bg-green-50 text-green-700 border-green-200/60' 
+                                  : 'bg-amber-50 text-amber-700 border-amber-200/60'
+                              }`}>
+                                {/* Condense the text so it matches the width of other pills */}
+                                {inv.status === 'verification_pending' ? 'Verifying' : inv.status}
+                              </span>
+                              
+                            </div>
+                            
+                            {/* THREE DOTS DROPDOWN MENU */}
+                            <div className="relative">
+                              <button 
+                                onClick={() => setOpenMenuId(openMenuId === inv.id ? null : inv.id)}
+                                className="text-stone-300 hover:text-stone-600 hover:bg-stone-100 p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
+                              >
+                                <MoreHorizontal size={20} />
+                              </button>
 
-                          {/* DYNAMIC ACTION VERIFICATION BLOCK WITH UTR */}
-                          {isVerificationPending && (
-                             <div className="flex flex-col sm:flex-row sm:items-center gap-3 mt-3 p-3 bg-amber-50 rounded-xl border border-amber-100 w-full max-w-2xl animate-in fade-in zoom-in-95 duration-200">
-                               <div className="flex flex-col gap-1.5 flex-shrink-0">
-                                 <div className="flex items-center gap-2">
-                                   <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                                   <p className="text-[11.5px] font-bold text-amber-900 leading-none">
-                                     Client marked as paid.
-                                   </p>
-                                 </div>
-                                 
-                                 {/* Render the UTR number cleanly for the freelancer */}
-                                 {inv.utr_number && (
-                                   <div className="flex items-center gap-2 ml-4">
-                                     <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider">UTR Ref:</span>
-                                     <span className="bg-amber-100 text-amber-900 font-mono text-xs px-2 py-0.5 rounded border border-amber-200 shadow-sm select-all">
-                                       {inv.utr_number}
-                                     </span>
-                                   </div>
-                                 )}
-                               </div>
-
-                               <div className="flex gap-2 sm:ml-auto mt-2 sm:mt-0">
-                                 <button 
-                                   onClick={() => handleVerifyStatus(inv.id, true)}
-                                   className="text-[11px] uppercase tracking-wider bg-green-600 hover:bg-green-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors shadow-sm active:scale-[0.97]"
-                                 >
-                                   Approve
-                                 </button>
-                                 <button 
-                                   onClick={() => handleVerifyStatus(inv.id, false)}
-                                   className="text-[11px] uppercase tracking-wider bg-white hover:bg-red-50 hover:text-red-600 text-slate-700 font-bold px-3 py-1.5 rounded-lg border border-stone-200 transition-colors shadow-sm active:scale-[0.97]"
-                                 >
-                                   Reject
-                                 </button>
-                               </div>
-                             </div>
-                          )}
+                              {/* Dropdown Card */}
+                              {openMenuId === inv.id && (
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-stone-200 shadow-xl rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right text-left">
+                                  <button 
+                                    onClick={() => handleCopyLink(inv.id)}
+                                    className="w-full px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-stone-50 transition-colors flex items-center gap-2"
+                                  >
+                                    <Copy size={16} className="text-slate-400" /> Copy Public Link
+                                  </button>
+                                  {inv.status === 'pending' && (
+                                    <button 
+                                      onClick={() => handleVerifyStatus(inv.id, true)}
+                                      className="w-full px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-2"
+                                    >
+                                      <Check size={16} className="text-indigo-400" /> Force Mark Paid
+                                    </button>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
-                      
-                      {/* RIGHT SIDE: Metrics, Menu, & Manual Override */}
-                      <div className="text-left sm:text-right flex flex-col sm:items-end w-full sm:w-auto pl-14 sm:pl-0 mt-3 sm:mt-0">
-                        <div className="flex items-center justify-between sm:justify-end gap-4 w-full">
-                          <div>
-                            <p className="font-bold text-[#111827] text-lg tracking-tight">₹{Number(inv.total_amount).toLocaleString('en-IN')}</p>
-                            <span className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full inline-block mt-1 ${
-                              isPaid ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'
-                            }`}>
-                              {inv.status.replace('_', ' ')}
-                            </span>
-                          </div>
-                          
-                          {/* THREE DOTS DROPDOWN MENU */}
-                          <div className="relative">
-                            <button 
-                              onClick={() => setOpenMenuId(openMenuId === inv.id ? null : inv.id)}
-                              className="text-stone-300 hover:text-stone-600 hover:bg-stone-100 p-1 rounded-md transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
-                            >
-                              <MoreHorizontal size={20} />
-                            </button>
 
-                            {/* Dropdown Card */}
-                            {openMenuId === inv.id && (
-                              <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-stone-200 shadow-xl rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right text-left">
-                                <button 
-                                  onClick={() => handleCopyLink(inv.id)}
-                                  className="w-full px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-stone-50 transition-colors flex items-center gap-2"
-                                >
-                                  <Copy size={16} className="text-slate-400" /> Copy Public Link
-                                </button>
-                                {/* Fallback manual override hidden in the menu */}
-                                {inv.status === 'pending' && (
-                                  <button 
-                                    onClick={() => handleVerifyStatus(inv.id, true)}
-                                    className="w-full px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-2"
-                                  >
-                                    <Check size={16} className="text-indigo-400" /> Force Mark Paid
-                                  </button>
-                                )}
+                      {/* BOTTOM ROW: Action Box (Spans full width gracefully below main content) */}
+                      {isVerificationPending && (
+                        <div className="ml-0 sm:ml-[3.25rem] mt-4 p-3.5 bg-amber-50 rounded-xl border border-amber-200/60 w-full sm:w-[calc(100%-3.25rem)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-200 shadow-sm">
+                          
+                          {/* Left Side: Status & UTR */}
+                          <div className="flex flex-col gap-2 flex-shrink-0">
+                            <div className="flex items-center gap-2">
+                              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
+                              <p className="text-[11.5px] font-bold text-amber-900 leading-none">
+                                Client marked as paid.
+                              </p>
+                            </div>
+                            
+                            {inv.utr_number && (
+                              <div className="flex items-center gap-2 ml-4">
+                                <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider">UTR Ref:</span>
+                                <span className="bg-amber-100/50 text-amber-900 font-mono text-xs px-2 py-0.5 rounded border border-amber-200 shadow-sm select-all">
+                                  {inv.utr_number}
+                                </span>
                               </div>
                             )}
                           </div>
-                        </div>
 
-                      </div>
+                          {/* Right Side: Buttons aligned horizontally */}
+                          <div className="flex items-center gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+                            <button 
+                              onClick={() => handleVerifyStatus(inv.id, true)}
+                              className="flex-1 sm:flex-none text-[11px] uppercase tracking-wider bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg transition-colors shadow-sm active:scale-[0.97]"
+                            >
+                              Approve
+                            </button>
+                            <button 
+                              onClick={() => handleVerifyStatus(inv.id, false)}
+                              className="flex-1 sm:flex-none text-[11px] uppercase tracking-wider bg-white hover:bg-red-50 hover:text-red-600 text-slate-700 font-bold px-4 py-2 rounded-lg border border-stone-200 transition-colors shadow-sm active:scale-[0.97]"
+                            >
+                              Reject
+                            </button>
+                          </div>
+                        </div>
+                      )}
+
                     </motion.div>
                   )
                 })
