@@ -157,6 +157,8 @@ export default function InvoiceBuilder() {
 
       if (invoiceError) throw invoiceError;
 
+      // ... (keep the Supabase insert code above this exactly the same)
+
       if (saveAsDefault) {
         await supabase.from("user_settings").upsert({
           user_id: user.id,
@@ -166,10 +168,21 @@ export default function InvoiceBuilder() {
       }
 
       const finalLink = `${window.location.origin}/invoice/${invoiceData.id}`;
-      await navigator.clipboard.writeText(finalLink);
+      
+      // --- NEW: SAFE CLIPBOARD HANDLING ---
+      try {
+        // Try to auto-copy (Works on Desktop/Chrome/Android)
+        await navigator.clipboard.writeText(finalLink);
+        toast.success("Link copied to clipboard!");
+      } catch (clipboardError) {
+        // If Safari blocks it, don't crash the app! Just show a generic success message.
+        console.warn("Auto-copy blocked by browser security.", clipboardError);
+        toast.success("Invoice generated successfully!");
+      }
+
+      // CRITICAL: Always update the state to show the success UI, even if clipboard fails
       setGeneratedLink(finalLink);
 
-      toast.success("Link copied to clipboard!");
     } catch (err) {
       console.error(err);
       toast.error("Failed to generate invoice.");
