@@ -11,6 +11,7 @@ import {
   Copy,
   ExternalLink,
   RefreshCw,
+  MessageCircle, // NEW: Icon for WhatsApp
 } from "lucide-react";
 import Image from "next/image";
 import { supabase } from "@/lib/supabase";
@@ -26,13 +27,14 @@ export default function InvoiceBuilder() {
   const [isGenerating, setIsGenerating] = useState(false);
   const [isLoadingDefaults, setIsLoadingDefaults] = useState(true);
 
-  // NEW: State to hold the link and stop the redirect
+  // State to hold the link and stop the redirect
   const [generatedLink, setGeneratedLink] = useState<string | null>(null);
 
   // Core State
   const [senderName, setSenderName] = useState("");
   const [upiId, setUpiId] = useState("");
   const [clientEmail, setClientEmail] = useState("");
+  const [clientPhone, setClientPhone] = useState(""); // NEW: WhatsApp Number State
   const [items, setItems] = useState([{ description: "", amount: "" }]);
 
   // Setting tracking
@@ -92,12 +94,12 @@ export default function InvoiceBuilder() {
     setItems(newItems);
   };
 
-  // NEW: Reset function to quickly bill the next client
+  // Reset function to quickly bill the next client
   const handleReset = () => {
     setGeneratedLink(null);
     setClientEmail("");
+    setClientPhone(""); // Reset phone as well
     setItems([{ description: "", amount: "" }]);
-    // Note: We deliberately KEEP the senderName, upiId, and tax settings so they don't have to retype them!
   };
 
   // Math Calculations
@@ -163,7 +165,6 @@ export default function InvoiceBuilder() {
         });
       }
 
-      // NEW BEHAVIOR: Copy to clipboard and show success UI instead of redirecting
       const finalLink = `${window.location.origin}/invoice/${invoiceData.id}`;
       await navigator.clipboard.writeText(finalLink);
       setGeneratedLink(finalLink);
@@ -175,6 +176,37 @@ export default function InvoiceBuilder() {
     } finally {
       setIsGenerating(false);
     }
+  };
+
+  // --- NEW: WHATSAPP SHARE FUNCTION ---
+  const handleWhatsAppShare = () => {
+    if (!generatedLink) return;
+
+    let formattedPhone = "";
+    if (clientPhone) {
+      const cleanPhone = clientPhone.replace(/\D/g, "");
+      // Auto-append Indian country code if missing
+      formattedPhone = cleanPhone.startsWith("91") ? cleanPhone : `91${cleanPhone}`;
+    }
+
+    // Extract a display name from the email if no specific name is stored
+    const clientName = clientEmail.split("@")[0];
+
+    const message = `Hello ${clientName},\n\n` +
+                    `Here is your invoice from *${senderName}*.\n\n` +
+                    `💰 *Total Amount Due:* ₹${totalAmount.toLocaleString('en-IN', { maximumFractionDigits: 2 })}\n` +
+                    `🔗 *Payment Link:* ${generatedLink}\n\n` +
+                    `You can scan the UPI QR code directly on the link to settle the bill securely. Please enter the 12-digit UTR number once done.\n\n` +
+                    `Thank you!`;
+
+    const encodedMessage = encodeURIComponent(message);
+    
+    // If no phone is provided, wa.me will open the app and ask the user to select a contact
+    const whatsAppUrl = formattedPhone 
+      ? `https://wa.me/${formattedPhone}?text=${encodedMessage}`
+      : `https://wa.me/?text=${encodedMessage}`;
+
+    window.open(whatsAppUrl, "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -226,13 +258,24 @@ export default function InvoiceBuilder() {
 
         <div className="bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-stone-200">
           <h2 className="font-bold text-[#111827] mb-4">Client Details</h2>
-          <input
-            type="email"
-            placeholder="Client Email"
-            value={clientEmail}
-            onChange={(e) => setClientEmail(e.target.value)}
-            className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none mb-5 sm:mb-6 text-sm sm:text-base"
-          />
+          
+          {/* UPDATED: Email and Phone Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
+            <input
+              type="email"
+              placeholder="Client Email (Required)"
+              value={clientEmail}
+              onChange={(e) => setClientEmail(e.target.value)}
+              className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm sm:text-base"
+            />
+            <input
+              type="tel"
+              placeholder="WhatsApp No. (Optional)"
+              value={clientPhone}
+              onChange={(e) => setClientPhone(e.target.value.replace(/\D/g, ''))}
+              className="w-full p-3 bg-stone-50 border border-stone-200 rounded-xl focus:ring-2 focus:ring-indigo-100 outline-none text-sm sm:text-base font-mono"
+            />
+          </div>
 
           <div className="grid grid-cols-2 gap-3 sm:gap-4 mb-5 sm:mb-6">
             <div
@@ -392,7 +435,7 @@ export default function InvoiceBuilder() {
             </div>
             <p className="text-sm text-green-800 font-medium">
               Your payment link has been copied to your clipboard. Paste it
-              directly to your client.
+              directly to your client or send it via WhatsApp.
             </p>
 
             <div className="flex items-center gap-2 bg-white p-2 rounded-xl border border-green-100 shadow-sm">
@@ -414,18 +457,26 @@ export default function InvoiceBuilder() {
               </button>
             </div>
 
-            <div className="flex gap-3 mt-2">
+            {/* UPDATED: Buttons Grid with WhatsApp integration */}
+            <div className="grid grid-cols-2 gap-3 mt-2">
+              <button
+                onClick={handleWhatsAppShare}
+                className="col-span-2 bg-[#25D366] text-white hover:bg-[#20bd5a] py-3 rounded-xl flex justify-center items-center gap-2 font-bold text-sm transition-colors shadow-md shadow-[#25D366]/20 active:scale-[0.98]"
+              >
+                <MessageCircle size={18} /> Send Invoice via WhatsApp
+              </button>
+              
               <a
                 href={generatedLink}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex-1 bg-white border border-green-200 text-green-700 hover:bg-green-100 py-3 rounded-xl flex justify-center items-center gap-2 font-bold text-sm transition-colors shadow-sm"
+                className="w-full bg-white border border-green-200 text-green-700 hover:bg-green-100 py-3 rounded-xl flex justify-center items-center gap-2 font-bold text-sm transition-colors shadow-sm"
               >
                 <ExternalLink size={16} /> Preview
               </a>
               <button
                 onClick={handleReset}
-                className="flex-1 bg-green-600 text-white hover:bg-green-700 py-3 rounded-xl flex justify-center items-center gap-2 font-bold text-sm transition-colors shadow-md shadow-green-200 active:scale-[0.98]"
+                className="w-full bg-green-600 text-white hover:bg-green-700 py-3 rounded-xl flex justify-center items-center gap-2 font-bold text-sm transition-colors shadow-md shadow-green-200 active:scale-[0.98]"
               >
                 <RefreshCw size={16} /> New Client
               </button>
@@ -434,7 +485,7 @@ export default function InvoiceBuilder() {
         )}
       </div>
 
-      {/* RIGHT COLUMN: LIVE PREVIEW (Unchanged) */}
+      {/* RIGHT COLUMN: LIVE PREVIEW */}
       <div className="sticky top-24 bg-white shadow-2xl shadow-black/5 rounded-sm p-8 sm:p-12 border border-stone-100 hidden lg:block">
         {/* CUSTOM LOGO (Make sure logo.png is in your /public folder) */}
         <div className="flex items-center gap-2 mb-10 pb-6 border-b border-stone-100">
@@ -486,6 +537,9 @@ export default function InvoiceBuilder() {
             <p className="font-medium text-slate-800 truncate pl-2">
               {clientEmail || "client@company.com"}
             </p>
+            {clientPhone && (
+              <p className="text-xs text-slate-500 mt-1">{clientPhone}</p>
+            )}
           </div>
         </div>
 
