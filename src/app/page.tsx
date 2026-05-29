@@ -6,8 +6,68 @@ import Image from "next/image";
 import InvoiceBuilder from "@/components/InvoiceBuilder";
 import { ArrowRight, LayoutDashboard } from "lucide-react";
 import { motion } from "framer-motion";
+import { useEffect, useState } from "react";
+import { supabase } from "@/lib/supabase";
 
 export default function HomePage() {
+  const [stats, setStats] = useState({
+    collected: 0,
+    pending: 0,
+    invoices: 0,
+  });
+
+  useEffect(() => {
+    const loadStats = async () => {
+      try {
+        const {
+          data: { user },
+        } = await supabase.auth.getUser();
+
+        if (!user) return;
+
+        const { data } = await supabase
+          .from("invoices")
+          .select("*")
+          .eq("user_id", user.id);
+
+        if (!data) return;
+
+        const collected = data
+          .filter(
+            (inv) =>
+              inv.status === "paid" ||
+              inv.status === "verified"
+          )
+          .reduce(
+            (sum, inv) =>
+              sum + Number(inv.total_amount),
+            0
+          );
+
+        const pending = data
+          .filter(
+            (inv) =>
+              inv.status === "pending" ||
+              inv.status === "verification_pending"
+          )
+          .reduce(
+            (sum, inv) =>
+              sum + Number(inv.total_amount),
+            0
+          );
+
+        setStats({
+          collected,
+          pending,
+          invoices: data.length,
+        });
+      } catch (err) {
+        console.error(err);
+      }
+    };
+
+    loadStats();
+  }, []);
   return (
     <main className="min-h-screen bg-[#e5e7eb] text-black">
       {/* NAVBAR */}
@@ -99,8 +159,8 @@ export default function HomePage() {
                 </div>
               </div>
 
-              <h2 className="display-text text-[80px] md:text-[120px] mt-8">
-                ₹9K
+              <h2 className="display-text text-[80px] md:text-[120px] mt-8 animate-number">
+                ₹{stats.collected.toLocaleString("en-IN")}
               </h2>
 
               <div className="grid grid-cols-2 gap-4 mt-8">
@@ -110,18 +170,18 @@ export default function HomePage() {
                   </p>
 
                   <h3 className="text-3xl font-bold mt-2">
-                    ₹6.7K
+                    ₹{stats.pending.toLocaleString("en-IN")}
                   </h3>
                 </div>
 
                 <div className="bg-[#d1ffca] rounded-3xl p-5">
                   <p className="text-sm text-[#444]">
-                    Verified
-                  </p>
+                  Invoices
+                </p>
 
-                  <h3 className="text-3xl font-bold mt-2">
-                    24
-                  </h3>
+<h3 className="text-3xl font-bold mt-2">
+  {stats.invoices}
+</h3>
                 </div>
               </div>
             </motion.div>
