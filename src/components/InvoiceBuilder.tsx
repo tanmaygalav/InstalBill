@@ -513,14 +513,14 @@ export default function InvoiceBuilder() {
           </div>
         </motion.div>
         <div className="lg:hidden bg-black text-white rounded-3xl p-5">
-          <p className="text-xs uppercase tracking-[0.2em] opacity-60">
-            Total Due
-          </p>
+        <p className="text-xs uppercase tracking-[0.2em] opacity-60">
+          Total Due
+        </p>
 
-          <h2 className="text-4xl font-black mt-2">
-            ₹{totalAmount.toLocaleString("en-IN")}
-          </h2>
-        </div>
+        <h2 className="text-4xl font-black mt-2">
+          ₹{totalAmount.toLocaleString("en-IN")}
+        </h2>
+      </div>
         {!generatedLink ? (
           <button
             onClick={handleGenerate}
@@ -738,6 +738,29 @@ export default function InvoiceBuilder() {
             </p>
           </div>
         </div>
+        {showAddresses && (
+          <div className="grid grid-cols-2 gap-4 mb-8">
+            <div className="bg-[#f3f3f3] rounded-3xl p-4">
+              <p className="text-xs uppercase tracking-wider text-[#666] mb-2">
+                Billing Address
+              </p>
+
+              <p className="text-sm whitespace-pre-wrap break-words">
+                {billingAddress || "Not provided"}
+              </p>
+            </div>
+
+            <div className="bg-[#f3f3f3] rounded-3xl p-4">
+              <p className="text-xs uppercase tracking-wider text-[#666] mb-2">
+                Shipping Address
+              </p>
+
+              <p className="text-sm whitespace-pre-wrap break-words">
+                {shippingAddress || "Not provided"}
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-4 border-b border-[#f3f6f6] pb-2 mb-4">
           <p className="col-span-3 font-medium text-[#6b6c6c] text-[14px]">
