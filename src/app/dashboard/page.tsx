@@ -4,33 +4,27 @@ import { useEffect, useState } from "react";
 import { motion, Variants } from "framer-motion";
 import { supabase } from "@/lib/supabase";
 import {
-  CheckCircle,
   TrendingUp,
   Clock,
   Receipt,
   Plus,
   ArrowUpRight,
-  Sparkles,
   Search,
   MoreHorizontal,
   Loader2,
   Copy,
   Check,
-  Download, // <-- ADD DOWNLOAD HERE
+  Download,
 } from "lucide-react";
 import Link from "next/link";
-
 import toast from "react-hot-toast";
 
 export default function DashboardPage() {
   const [invoices, setInvoices] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
-
-  // NEW: Filter State
   const [filterStatus, setFilterStatus] = useState("all");
 
-  // --- REAL DATA FETCHING, AUTH & LIVE SYNC ---
   useEffect(() => {
     let channel: any;
 
@@ -54,7 +48,6 @@ export default function DashboardPage() {
         if (error) throw error;
         if (data) setInvoices(data);
 
-        // LIVE SYNC LISTENER
         channel = supabase
           .channel(`dashboard-sync-${Math.random()}`)
           .on(
@@ -91,7 +84,6 @@ export default function DashboardPage() {
     };
   }, []);
 
-  // --- MANUAL FREELANCER VERIFICATION ENGINE ---
   const handleVerifyStatus = async (
     invoiceId: string,
     confirmPaid: boolean,
@@ -125,23 +117,19 @@ export default function DashboardPage() {
     }
   };
 
-  // --- COPY LINK HELPER ---
   const handleCopyLink = (invoiceId: string) => {
     const url = `${window.location.origin}/invoice/${invoiceId}`;
     navigator.clipboard.writeText(url);
     toast.success("Payment link copied to clipboard!");
     setOpenMenuId(null);
   };
-  // --- EXPORT TO EXCEL/CSV ---
+
   const handleExportCSV = () => {
-    // 1. Check if there's data to export
-    // We use `filteredInvoices` so if they filter by "Settled", it only exports settled invoices!
     if (filteredInvoices.length === 0) {
       toast.error("No invoices to export.");
       return;
     }
 
-    // 2. Define standard Excel headers
     const headers = [
       "Invoice ID",
       "Date",
@@ -151,23 +139,20 @@ export default function DashboardPage() {
       "UTR Reference",
     ];
 
-    // 3. Map the data into rows
     const rows = filteredInvoices.map((inv) => [
-      inv.id.split("-")[0], // Use the short ID
+      inv.id.split("-")[0],
       new Date(inv.created_at).toLocaleDateString(),
       inv.client_email,
       inv.total_amount,
       inv.status.replace("_", " ").toUpperCase(),
-      inv.utr_number ? `'${inv.utr_number}` : "N/A", // The single quote forces Excel to treat UTR as text, preventing scientific notation bugs!
+      inv.utr_number ? `'${inv.utr_number}` : "N/A",
     ]);
 
-    // 4. Build the CSV string
     const csvContent = [
       headers.join(","),
       ...rows.map((row) => row.join(",")),
     ].join("\n");
 
-    // 5. Trigger the hidden download
     const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
     const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
@@ -183,7 +168,6 @@ export default function DashboardPage() {
     toast.success("Excel report downloaded!");
   };
 
-  // --- DYNAMIC FINANCIAL METRICS ---
   const totalCollected = invoices
     .filter((inv) => inv.status === "paid" || inv.status === "verified")
     .reduce((sum, inv) => sum + Number(inv.total_amount), 0);
@@ -200,7 +184,6 @@ export default function DashboardPage() {
   ).length;
   const totalInvoices = invoices.length;
 
-  // --- FILTER LOGIC ---
   const filteredInvoices = invoices.filter((invoice) => {
     if (filterStatus === "all") return true;
     if (filterStatus === "paid")
@@ -208,7 +191,6 @@ export default function DashboardPage() {
     return invoice.status === filterStatus;
   });
 
-  // --- FRAMER MOTION CONFIG ---
   const containerVariants: Variants = {
     hidden: { opacity: 0 },
     show: { opacity: 1, transition: { staggerChildren: 0.1 } },
@@ -223,22 +205,11 @@ export default function DashboardPage() {
     },
   };
 
-  const buttonVariants: Variants = {
-    hover: {
-      scale: 1.02,
-      transition: { type: "spring", stiffness: 400, damping: 20 },
-    },
-    tap: {
-      scale: 0.98,
-      transition: { type: "spring", stiffness: 400, damping: 20 },
-    },
-  };
-
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#FEF9F2] flex flex-col items-center justify-center text-[#111827]">
-        <Loader2 className="animate-spin text-indigo-600 mb-4" size={40} />
-        <p className="font-medium text-slate-500">
+      <div className="min-h-screen bg-[#f3f6f6] flex flex-col items-center justify-center text-[#1d1d1f]">
+        <Loader2 className="animate-spin text-[#0071e3] mb-4" size={40} />
+        <p className="font-medium text-[#6b6c6c]">
           Syncing secure billing data...
         </p>
       </div>
@@ -246,9 +217,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen pb-12 bg-[#FEF9F2] text-[#111827]">
+    <div className="min-h-screen pb-12 bg-[#f3f6f6] text-[#1d1d1f] font-sans">
       {/* TOP NAVIGATION BAR */}
-      <nav className="bg-white border-b border-stone-200 sticky top-0 z-50">
+      <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Image
@@ -258,14 +229,14 @@ export default function DashboardPage() {
               height={32}
               className="w-8 h-8 rounded-lg object-contain"
             />
-            <span className="text-xl font-bold tracking-tight text-[#111827]">
+            <span className="text-xl font-semibold tracking-[-0.02em] text-[#1d1d1f]">
               InstaBill
             </span>
           </div>
 
           <div className="flex items-center gap-4">
-            <div className="hidden md:flex items-center gap-2 bg-stone-50 border border-stone-200 px-3 py-1.5 rounded-full text-sm font-medium text-slate-600">
-              <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+            <div className="hidden md:flex items-center gap-2 bg-[#f3f6f6] px-3 py-1.5 rounded-full text-sm font-medium text-[#1d1d1f]">
+              <span className="w-2 h-2 rounded-full bg-green-500"></span>
               Live Mode
             </div>
           </div>
@@ -284,114 +255,92 @@ export default function DashboardPage() {
           className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10"
         >
           <div>
-            <p className="text-sm font-bold text-slate-400 mb-1 uppercase tracking-wider">
+            <p className="text-[14px] font-medium text-[#6b6c6c] mb-1 tracking-tight">
               Overview
             </p>
-            <h1 className="text-4xl font-bold tracking-tight text-[#111827]">
+            <h1 className="text-4xl md:text-[44px] font-semibold tracking-[-0.02em] text-[#1d1d1f] leading-tight">
               Welcome back
             </h1>
           </div>
 
           <Link href="/">
-            <motion.button
-              variants={buttonVariants}
-              whileHover="hover"
-              whileTap="tap"
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl flex items-center gap-2 transition-all shadow-lg shadow-indigo-200 w-full md:w-auto justify-center"
-            >
+            <button className="bg-[#0071e3] hover:bg-[#0066cc] text-white font-medium py-[11px] px-6 rounded-[28px] flex items-center gap-2 transition-all w-full md:w-auto justify-center text-[17px] tracking-[-0.16px]">
               <Plus size={18} /> Create New Link
-            </motion.button>
+            </button>
           </Link>
         </motion.div>
 
         {/* FINANCIAL DATA SUMMARY CARDS */}
-        <div className="grid md:grid-cols-3 gap-6 mb-10">
+        <div className="grid md:grid-cols-3 gap-[10px] mb-12">
           <motion.div
             variants={itemVariants}
-            className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200 relative overflow-hidden group"
+            className="bg-white p-[24px] rounded-[28px] relative overflow-hidden group flex flex-col justify-between"
           >
-            <div className="absolute top-0 right-0 p-6 opacity-5 transform translate-x-4 -translate-y-4 group-hover:scale-110 transition-transform duration-500">
-              <TrendingUp size={100} className="text-indigo-600" />
-            </div>
-            <div className="flex justify-between items-start mb-4 relative z-10">
-              <div className="p-2.5 bg-indigo-50 text-indigo-600 rounded-xl border border-indigo-100">
-                <TrendingUp size={20} />
-              </div>
-            </div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1 relative z-10">
+            <p className="text-[14px] font-medium text-[#6b6c6c] tracking-tight mb-2">
               Total Collected
             </p>
-            <h2 className="text-4xl font-extrabold text-[#111827] tracking-tight relative z-10">
+            <h2 className="text-3xl font-semibold tracking-[-0.02em] text-[#1d1d1f]">
               ₹{totalCollected.toLocaleString("en-IN")}
             </h2>
           </motion.div>
 
           <motion.div
             variants={itemVariants}
-            className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200"
+            className="bg-white p-[24px] rounded-[28px] flex flex-col justify-between"
           >
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2.5 bg-amber-50 text-amber-600 rounded-xl border border-amber-100">
-                <Clock size={20} />
-              </div>
+            <div>
+              <p className="text-[14px] font-medium text-[#6b6c6c] tracking-tight mb-2">
+                Awaiting Payment
+              </p>
+              <h2 className="text-3xl font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+                ₹{pendingAmount.toLocaleString("en-IN")}
+              </h2>
             </div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Awaiting Payment
-            </p>
-            <h2 className="text-4xl font-extrabold text-[#111827] tracking-tight">
-              ₹{pendingAmount.toLocaleString("en-IN")}
-            </h2>
-            <p className="text-sm text-slate-500 mt-2 font-medium">
+            <p className="text-sm text-[#6b6c6c] mt-2 tracking-tight">
               Across {pendingCount} pending invoice(s)
             </p>
           </motion.div>
 
           <motion.div
             variants={itemVariants}
-            className="bg-white p-6 rounded-3xl shadow-lg shadow-black/5 border border-stone-200"
+            className="bg-white p-[24px] rounded-[28px] flex flex-col justify-between"
           >
-            <div className="flex justify-between items-start mb-4">
-              <div className="p-2.5 bg-stone-100 text-stone-600 rounded-xl border border-stone-200">
-                <Receipt size={20} />
-              </div>
+            <div>
+              <p className="text-[14px] font-medium text-[#6b6c6c] tracking-tight mb-2">
+                Invoices Generated
+              </p>
+              <h2 className="text-3xl font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+                {totalInvoices}
+              </h2>
             </div>
-            <p className="text-sm font-bold text-slate-400 uppercase tracking-wider mb-1">
-              Invoices Generated
-            </p>
-            <h2 className="text-4xl font-extrabold text-[#111827] tracking-tight">
-              {totalInvoices}
-            </h2>
-            <p className="text-sm text-slate-500 mt-2 font-medium">
+            <p className="text-sm text-[#6b6c6c] mt-2 tracking-tight">
               Lifetime total
             </p>
           </motion.div>
         </div>
 
         {/* BOTTOM CONTENT GRID */}
-        <div className="grid lg:grid-cols-3 gap-8">
-          {/* Main List: REAL INVOICES ACTIVITY ROW */}
+        <div className="grid lg:grid-cols-3 gap-[10px]">
+          {/* Main List */}
           <motion.div
             variants={itemVariants}
-            className="lg:col-span-2 bg-white rounded-3xl shadow-lg shadow-black/5 border border-stone-200 h-fit"
+            className="lg:col-span-2 bg-white rounded-[28px] h-fit"
           >
-            <div className="p-6 border-b border-stone-100 flex flex-col gap-5 bg-stone-50/50 rounded-t-3xl">
+            <div className="p-[24px] border-b border-[#f3f6f6] flex flex-col gap-5">
               <div className="flex justify-between items-center">
-                <h3 className="text-lg font-bold text-[#111827]">
+                <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
                   Recent Activity
                 </h3>
-                <button className="p-2 text-slate-400 hover:text-indigo-600 transition-colors bg-white rounded-lg border border-stone-200 shadow-sm">
-                  <Search size={16} />
-                </button>
               </div>
 
               {/* FILTER TABS */}
-              <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-4 duration-500">
+              <div className="flex flex-wrap gap-2">
                 <button
                   onClick={() => setFilterStatus("all")}
-                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  className={`px-4 py-2 rounded-[28px] text-[14px] font-medium transition-all ${
                     filterStatus === "all"
-                      ? "bg-[#111827] text-white shadow-md"
-                      : "bg-white text-slate-500 hover:bg-stone-50 border border-stone-200"
+                      ? "bg-[#1d1d1f] text-white"
+                      : "bg-[#f3f6f6] text-[#1d1d1f] hover:bg-[#e8e8ed]"
                   }`}
                 >
                   All Invoices
@@ -399,10 +348,10 @@ export default function DashboardPage() {
 
                 <button
                   onClick={() => setFilterStatus("pending")}
-                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  className={`px-4 py-2 rounded-[28px] text-[14px] font-medium transition-all ${
                     filterStatus === "pending"
-                      ? "bg-indigo-100 text-indigo-700 shadow-sm border border-indigo-200"
-                      : "bg-white text-slate-500 hover:bg-stone-50 border border-stone-200"
+                      ? "bg-[#0071e3] text-white"
+                      : "bg-[#f3f6f6] text-[#1d1d1f] hover:bg-[#e8e8ed]"
                   }`}
                 >
                   Awaiting Payment
@@ -410,26 +359,26 @@ export default function DashboardPage() {
 
                 <button
                   onClick={() => setFilterStatus("verification_pending")}
-                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all flex items-center gap-2 ${
+                  className={`px-4 py-2 rounded-[28px] text-[14px] font-medium transition-all flex items-center gap-2 ${
                     filterStatus === "verification_pending"
-                      ? "bg-amber-100 text-amber-700 shadow-sm border border-amber-200"
-                      : "bg-white text-slate-500 hover:bg-stone-50 border border-stone-200"
+                      ? "bg-[#b64400] text-white"
+                      : "bg-[#f3f6f6] text-[#1d1d1f] hover:bg-[#e8e8ed]"
                   }`}
                 >
                   Needs Verification
                   {invoices.some(
                     (inv) => inv.status === "verification_pending",
                   ) && (
-                    <span className="flex h-2 w-2 rounded-full bg-amber-500"></span>
+                    <span className="flex h-2 w-2 rounded-full bg-white"></span>
                   )}
                 </button>
 
                 <button
                   onClick={() => setFilterStatus("paid")}
-                  className={`px-4 py-2 rounded-full text-sm font-bold transition-all ${
+                  className={`px-4 py-2 rounded-[28px] text-[14px] font-medium transition-all ${
                     filterStatus === "paid"
-                      ? "bg-green-100 text-green-700 shadow-sm border border-green-200"
-                      : "bg-white text-slate-500 hover:bg-stone-50 border border-stone-200"
+                      ? "bg-[#1d1d1f] text-white"
+                      : "bg-[#f3f6f6] text-[#1d1d1f] hover:bg-[#e8e8ed]"
                   }`}
                 >
                   Settled
@@ -437,21 +386,14 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="divide-y divide-stone-100">
+            <div className="divide-y divide-[#f3f6f6]">
               {filteredInvoices.length === 0 ? (
                 <div className="p-10 text-center">
-                  <p className="text-slate-500 font-medium mb-4">
+                  <p className="text-[#6b6c6c] font-medium mb-4">
                     {invoices.length === 0
                       ? "No tracking elements configured yet."
                       : "No invoices found for this status."}
                   </p>
-                  {invoices.length === 0 && (
-                    <Link href="/">
-                      <button className="text-sm bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold py-2 px-4 rounded-lg transition-colors border border-indigo-100">
-                        Create Your First Invoice
-                      </button>
-                    </Link>
-                  )}
                 </div>
               ) : (
                 filteredInvoices.map((inv) => {
@@ -463,63 +405,52 @@ export default function DashboardPage() {
                   return (
                     <motion.div
                       key={inv.id}
-                      whileHover={{
-                        backgroundColor: "rgba(245, 245, 244, 0.5)",
-                      }}
-                      className="p-5 flex flex-col transition-colors group"
+                      className="p-[24px] flex flex-col transition-colors group"
                     >
                       {/* TOP ROW: Main Invoice Details */}
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 sm:gap-0">
                         {/* LEFT: Icon & Info */}
                         <div className="flex items-start sm:items-center gap-4 w-full">
-                          <div
-                            className={`p-3 rounded-2xl flex-shrink-0 mt-1 sm:mt-0 ${isPaid ? "bg-green-50 text-green-600" : "bg-amber-50 text-amber-600"}`}
-                          >
-                            {isPaid ? (
-                              <ArrowUpRight size={20} />
-                            ) : (
-                              <Clock size={20} />
-                            )}
-                          </div>
                           <div className="flex-grow">
-                            <p className="font-bold text-[#111827] group-hover:text-indigo-600 transition-colors truncate max-w-[200px] md:max-w-[300px]">
+                            <p className="font-semibold text-[#1d1d1f] tracking-tight truncate max-w-[200px] md:max-w-[300px]">
                               {inv.client_email}
                             </p>
-                            <div className="flex items-center gap-2 mt-0.5">
-                              <span className="text-xs font-mono text-slate-400 font-medium">
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[14px] text-[#6b6c6c]">
                                 #{inv.id.split("-")[0]}
                               </span>
-                              <span className="w-1 h-1 rounded-full bg-stone-300"></span>
-                              <span className="text-xs text-slate-500 font-medium">
-                                {new Date(inv.created_at).toLocaleDateString()}
+                              <span className="text-[14px] text-[#6b6c6c]">
+                                • {new Date(inv.created_at).toLocaleDateString()}
                               </span>
                             </div>
                           </div>
                         </div>
 
                         {/* RIGHT: Price, Status Pill, and Menu */}
-                        <div className="text-left sm:text-right flex flex-col sm:items-end w-full sm:w-auto pl-14 sm:pl-0 mt-2 sm:mt-0">
+                        <div className="text-left sm:text-right flex flex-col sm:items-end w-full sm:w-auto mt-2 sm:mt-0">
                           <div className="flex items-center justify-between sm:justify-end gap-4 w-full">
                             <div className="flex flex-col items-start sm:items-end">
-                              <p className="font-bold text-[#111827] text-lg tracking-tight">
+                              <p className="font-semibold text-[#1d1d1f] text-lg tracking-tight">
                                 ₹
                                 {Number(inv.total_amount).toLocaleString(
                                   "en-IN",
                                 )}
                               </p>
 
-                              {/* SHARPENED STATUS PILL */}
                               <span
-                                className={`text-[9.5px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-md sm:rounded-full inline-flex items-center justify-center whitespace-nowrap mt-1 border ${
+                                className={`text-[12px] font-medium tracking-tight mt-1 ${
                                   isPaid
-                                    ? "bg-green-50 text-green-700 border-green-200/60"
-                                    : "bg-amber-50 text-amber-700 border-amber-200/60"
+                                    ? "text-[#1d1d1f]"
+                                    : isVerificationPending
+                                    ? "text-[#b64400]"
+                                    : "text-[#6b6c6c]"
                                 }`}
                               >
-                                {/* Condense the text so it matches the width of other pills */}
                                 {inv.status === "verification_pending"
                                   ? "Verifying"
-                                  : inv.status}
+                                  : inv.status === "pending"
+                                  ? "Pending"
+                                  : "Paid"}
                               </span>
                             </div>
 
@@ -531,36 +462,28 @@ export default function DashboardPage() {
                                     openMenuId === inv.id ? null : inv.id,
                                   )
                                 }
-                                className="text-stone-300 hover:text-stone-600 hover:bg-stone-100 p-1.5 rounded-lg transition-colors opacity-100 sm:opacity-0 group-hover:opacity-100"
+                                className="text-[#6b6c6c] hover:text-[#1d1d1f] p-1.5 rounded-[12px] transition-colors"
                               >
                                 <MoreHorizontal size={20} />
                               </button>
 
                               {/* Dropdown Card */}
                               {openMenuId === inv.id && (
-                                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-stone-200 shadow-xl rounded-xl z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-100 origin-top-right text-left">
+                                <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-[#cccfcf] shadow-[rgba(0,0,0,0.11)_0px_0px_1px_0px_inset] rounded-[12px] z-50 overflow-hidden text-left p-1">
                                   <button
                                     onClick={() => handleCopyLink(inv.id)}
-                                    className="w-full px-4 py-3 text-sm font-semibold text-slate-700 hover:bg-stone-50 transition-colors flex items-center gap-2"
+                                    className="w-full px-4 py-2 text-[14px] text-[#1d1d1f] hover:bg-[#f3f6f6] rounded-[8px] transition-colors flex items-center gap-2"
                                   >
-                                    <Copy
-                                      size={16}
-                                      className="text-slate-400"
-                                    />{" "}
-                                    Copy Public Link
+                                    <Copy size={14} /> Copy Link
                                   </button>
                                   {inv.status === "pending" && (
                                     <button
                                       onClick={() =>
                                         handleVerifyStatus(inv.id, true)
                                       }
-                                      className="w-full px-4 py-3 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 transition-colors flex items-center gap-2"
+                                      className="w-full px-4 py-2 text-[14px] text-[#0071e3] hover:bg-[#f3f6f6] rounded-[8px] transition-colors flex items-center gap-2"
                                     >
-                                      <Check
-                                        size={16}
-                                        className="text-indigo-400"
-                                      />{" "}
-                                      Force Mark Paid
+                                      <Check size={14} /> Mark Paid
                                     </button>
                                   )}
                                 </div>
@@ -570,41 +493,29 @@ export default function DashboardPage() {
                         </div>
                       </div>
 
-                      {/* BOTTOM ROW: Action Box (Spans full width gracefully below main content) */}
+                      {/* ACTION BOX (For verification) */}
                       {isVerificationPending && (
-                        <div className="ml-0 sm:ml-[3.25rem] mt-4 p-3.5 bg-amber-50 rounded-xl border border-amber-200/60 w-full sm:w-[calc(100%-3.25rem)] flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in zoom-in-95 duration-200 shadow-sm">
-                          {/* Left Side: Status & UTR */}
-                          <div className="flex flex-col gap-2 flex-shrink-0">
-                            <div className="flex items-center gap-2">
-                              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse"></div>
-                              <p className="text-[11.5px] font-bold text-amber-900 leading-none">
-                                Client marked as paid.
-                              </p>
-                            </div>
-
+                        <div className="mt-4 p-4 bg-[#f3f6f6] rounded-[12px] w-full flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                          <div className="flex flex-col gap-1">
+                            <p className="text-[14px] font-medium text-[#1d1d1f]">
+                              Client claims paid.
+                            </p>
                             {inv.utr_number && (
-                              <div className="flex items-center gap-2 ml-4">
-                                <span className="text-[10px] uppercase font-bold text-amber-700 tracking-wider">
-                                  UTR Ref:
-                                </span>
-                                <span className="bg-amber-100/50 text-amber-900 font-mono text-xs px-2 py-0.5 rounded border border-amber-200 shadow-sm select-all">
-                                  {inv.utr_number}
-                                </span>
-                              </div>
+                              <p className="text-[12px] text-[#6b6c6c]">
+                                UTR: {inv.utr_number}
+                              </p>
                             )}
                           </div>
-
-                          {/* Right Side: Buttons aligned horizontally */}
-                          <div className="flex items-center gap-2 w-full sm:w-auto mt-1 sm:mt-0">
+                          <div className="flex items-center gap-2 w-full sm:w-auto">
                             <button
                               onClick={() => handleVerifyStatus(inv.id, true)}
-                              className="flex-1 sm:flex-none text-[11px] uppercase tracking-wider bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg transition-colors shadow-sm active:scale-[0.97]"
+                              className="flex-1 sm:flex-none text-[14px] bg-[#1d1d1f] text-white px-4 py-2 rounded-[28px] font-medium transition-colors"
                             >
                               Approve
                             </button>
                             <button
                               onClick={() => handleVerifyStatus(inv.id, false)}
-                              className="flex-1 sm:flex-none text-[11px] uppercase tracking-wider bg-white hover:bg-red-50 hover:text-red-600 text-slate-700 font-bold px-4 py-2 rounded-lg border border-stone-200 transition-colors shadow-sm active:scale-[0.97]"
+                              className="flex-1 sm:flex-none text-[14px] bg-transparent border border-[#cccfcf] text-[#1d1d1f] px-4 py-2 rounded-[28px] font-medium transition-colors hover:bg-white"
                             >
                               Reject
                             </button>
@@ -616,42 +527,24 @@ export default function DashboardPage() {
                 })
               )}
             </div>
-
-            {filteredInvoices.length > 0 && (
-              <div className="p-4 bg-stone-50 border-t border-stone-100 text-center rounded-b-3xl">
-                <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">
-                  End of recent activity
-                </p>
-              </div>
-            )}
           </motion.div>
 
-          {/* RIGHT SIDEBAR: UPSELL PANELS & ACTIONS */}
-          <motion.div variants={itemVariants} className="space-y-6">
-            {/* QUICK ACTIONS PANEL */}
-            <div className="bg-white rounded-3xl p-6 shadow-lg shadow-black/5 border border-stone-200">
-              <h4 className="text-sm font-bold text-[#111827] mb-4 uppercase tracking-wider">
+          {/* RIGHT SIDEBAR */}
+          <motion.div variants={itemVariants} className="space-y-[10px]">
+            <div className="bg-white rounded-[28px] p-[24px]">
+              <h4 className="text-[14px] font-medium text-[#6b6c6c] mb-4">
                 Quick Actions
               </h4>
-              <div className="space-y-3">
-                <button
-                  onClick={handleExportCSV}
-                  className="w-full text-left px-4 py-3.5 rounded-xl bg-stone-50 hover:bg-indigo-50 hover:text-indigo-700 font-semibold text-slate-700 text-sm transition-all border border-stone-200 hover:border-indigo-200 flex justify-between items-center group active:scale-[0.98]"
-                >
-                  <span className="flex items-center gap-2">
-                    <Download
-                      size={18}
-                      className="text-slate-400 group-hover:text-indigo-500 transition-colors"
-                    />
-                    Export to Excel (CSV)
-                  </span>
-                  <ArrowUpRight
-                    size={16}
-                    className="opacity-0 group-hover:opacity-100 text-indigo-400 transition-opacity"
-                  />
-                </button>
-              </div>
-              <p className="text-[11px] text-slate-400 mt-4 font-medium leading-relaxed">
+              <button
+                onClick={handleExportCSV}
+                className="w-full text-left px-4 py-[11px] rounded-[12px] bg-[#f3f6f6] hover:bg-[#e8e8ed] text-[#1d1d1f] text-[14px] font-medium transition-all flex justify-between items-center"
+              >
+                <span className="flex items-center gap-2">
+                  <Download size={16} className="text-[#1d1d1f]" />
+                  Export to Excel
+                </span>
+              </button>
+              <p className="text-[12px] text-[#6b6c6c] mt-4 tracking-tight leading-relaxed">
                 Exports currently respect your active filters. To export all
                 time data, ensure the "All Invoices" tab is selected.
               </p>
