@@ -1,3 +1,4 @@
+// src/app/page.tsx
 import InvoiceBuilder from "@/components/InvoiceBuilder";
 import Link from "next/link";
 import { CheckCircle, LayoutDashboard } from "lucide-react";
