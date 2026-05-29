@@ -217,8 +217,23 @@ export default function DashboardPage() {
     );
   }
 
+  const successRate =
+  totalInvoices === 0
+    ? 0
+    : Math.round(
+        (
+          invoices.filter(
+            (i) =>
+              i.status === "paid" ||
+              i.status === "verified"
+          ).length /
+          totalInvoices
+        ) *
+          100
+      );
+
   return (
-    <div className="min-h-screen pb-12 bg-[#f3f6f6] text-[#1d1d1f] font-sans">
+    <div className="min-h-screen bg-[#e5e7eb] text-black grid-noise">
       {/* TOP NAVIGATION BAR */}
       <nav className="bg-white/80 backdrop-blur-md sticky top-0 z-50">
         <div className="max-w-7xl mx-auto px-4 md:px-8 h-16 flex items-center justify-between">
@@ -248,31 +263,100 @@ export default function DashboardPage() {
         variants={containerVariants}
         initial="hidden"
         animate="show"
-        className="max-w-7xl mx-auto px-4 md:px-8 pt-10"
+        className="
+                  max-w-[1400px]
+                  mx-auto
+                  px-4
+                  sm:px-5
+                  md:px-8
+                  pt-8
+                  md:pt-10
+                  pb-20
+                  overflow-hidden
+                  "
       >
         {/* HEADER AREA */}
         <motion.div
           variants={itemVariants}
           className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-10"
         >
-          <div>
-            <p className="text-[14px] font-medium text-[#6b6c6c] mb-1 tracking-tight">
-              Overview
+          <motion.div
+            variants={itemVariants}
+            className="mb-12"
+          >
+            <p className="uppercase tracking-[0.25em] text-[11px] text-[#979797]">
+              Billing Control Center
             </p>
-            <h1 className="text-4xl md:text-[44px] font-semibold tracking-[-0.02em] text-[#1d1d1f] leading-tight">
-              Welcome back
-            </h1>
-          </div>
 
-          <Link href="/">
-            <button className="bg-[#0071e3] hover:bg-[#0066cc] text-white font-medium py-[11px] px-6 rounded-[28px] flex items-center gap-2 transition-all w-full md:w-auto justify-center text-[17px] tracking-[-0.16px]">
-              <Plus size={18} /> Create New Link
+            <h1
+              className="
+              display-text
+              text-[clamp(2.8rem,12vw,7rem)]
+              leading-[0.9]
+              break-words
+              "
+            >
+              DASHBOARD
+            </h1>
+          </motion.div>
+
+          <div
+            className="
+            flex
+            flex-col
+            sm:flex-row
+            gap-3
+            w-full
+            "
+          >
+            <button
+              onClick={handleExportCSV}
+              className="
+              w-full
+              sm:w-auto
+              h-12
+              h-12
+              px-5
+              rounded-xl
+              bg-white
+              border
+              border-black/10
+              flex
+              items-center
+              justify-center
+              gap-2
+              "
+            >
+              <Download size={16} />
+              Export CSV
             </button>
-          </Link>
+
+            <Link href="/">
+              <button
+                className="
+                w-full
+                sm:w-auto
+                h-12
+                h-12
+                px-5
+                rounded-xl
+                bg-black
+                text-white
+                flex
+                items-center
+                justify-center
+                gap-2
+                "
+              >
+                <Plus size={16} />
+                New Invoice
+              </button>
+            </Link>
+          </div>
         </motion.div>
 
         {/* FINANCIAL DATA SUMMARY CARDS */}
-        <div className="grid md:grid-cols-3 gap-[10px] mb-12">
+        <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4 mb-12">
           <motion.div
             variants={itemVariants}
             className="bg-white p-[24px] rounded-[28px] relative overflow-hidden group flex flex-col justify-between"
@@ -280,7 +364,7 @@ export default function DashboardPage() {
             <p className="text-[14px] font-medium text-[#6b6c6c] tracking-tight mb-2">
               Total Collected
             </p>
-            <h2 className="text-3xl font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+            <h2 className="text-[56px] font-black leading-none tracking-[-0.02em] text-[#1d1d1f]">
               ₹{totalCollected.toLocaleString("en-IN")}
             </h2>
           </motion.div>
@@ -293,7 +377,7 @@ export default function DashboardPage() {
               <p className="text-[14px] font-medium text-[#6b6c6c] tracking-tight mb-2">
                 Awaiting Payment
               </p>
-              <h2 className="text-3xl font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+              <h2 className="text-[56px] font-black leading-none tracking-[-0.02em] text-[#1d1d1f]">
                 ₹{pendingAmount.toLocaleString("en-IN")}
               </h2>
             </div>
@@ -310,7 +394,7 @@ export default function DashboardPage() {
               <p className="text-[14px] font-medium text-[#6b6c6c] tracking-tight mb-2">
                 Invoices Generated
               </p>
-              <h2 className="text-3xl font-semibold tracking-[-0.02em] text-[#1d1d1f]">
+              <h2 className="text-[56px] font-black leading-none tracking-[-0.02em] text-[#1d1d1f]">
                 {totalInvoices}
               </h2>
             </div>
@@ -318,20 +402,44 @@ export default function DashboardPage() {
               Lifetime total
             </p>
           </motion.div>
+          <motion.div
+            variants={itemVariants}
+            className="
+                      bg-white
+                      rounded-[32px]
+                      p-5
+                      sm:p-6
+                      lg:p-8
+                      "
+          >
+            <p className="uppercase tracking-[0.2em] text-[11px] text-[#979797]">
+              Success Rate
+            </p>
+
+            <h2 className="text-[56px] font-black mt-4">
+              {successRate}%
+            </h2>
+          </motion.div>
         </div>
 
         {/* BOTTOM CONTENT GRID */}
-        <div className="grid lg:grid-cols-3 gap-[10px]">
+        <div className="w-full">
           {/* Main List */}
           <motion.div
             variants={itemVariants}
-            className="lg:col-span-2 bg-white rounded-[28px] h-fit"
+            className="bg-white rounded-[32px] h-fit"
           >
             <div className="p-[24px] border-b border-[#f3f6f6] flex flex-col gap-5">
               <div className="flex justify-between items-center">
-                <h3 className="text-[20px] font-semibold tracking-[-0.02em] text-[#1d1d1f]">
-                  Recent Activity
-                </h3>
+                <div>
+                  <p className="uppercase tracking-[0.25em] text-[11px] text-[#979797]">
+                    Transactions
+                  </p>
+
+                  <h3 className="text-[40px] font-black mt-2">
+                    PAYMENT PIPELINE
+                  </h3>
+                </div>
               </div>
 
               {/* FILTER TABS */}
@@ -439,19 +547,19 @@ export default function DashboardPage() {
                               </p>
 
                               <span
-                                className={`text-[12px] font-medium tracking-tight mt-1 ${
+                                className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold mt-2 ${
                                   isPaid
-                                    ? "text-[#1d1d1f]"
+                                    ? "bg-[#d1ffca] text-black"
                                     : isVerificationPending
-                                    ? "text-[#b64400]"
-                                    : "text-[#6b6c6c]"
+                                    ? "bg-orange-200 text-black"
+                                    : "bg-[#fff100] text-black"
                                 }`}
                               >
                                 {inv.status === "verification_pending"
                                   ? "Verifying"
                                   : inv.status === "pending"
                                   ? "Pending"
-                                  : "Paid"}
+                                  : "Verified"}
                               </span>
                             </div>
 
@@ -484,7 +592,7 @@ export default function DashboardPage() {
                                       }
                                       className="w-full px-4 py-2 text-[14px] text-[#0071e3] hover:bg-[#f3f6f6] rounded-[8px] transition-colors flex items-center gap-2"
                                     >
-                                      <Check size={14} /> Mark Paid
+                                      <Check size={14} /> Force Mark Paid
                                     </button>
                                   )}
                                 </div>
@@ -530,27 +638,6 @@ export default function DashboardPage() {
             </div>
           </motion.div>
 
-          {/* RIGHT SIDEBAR */}
-          <motion.div variants={itemVariants} className="space-y-[10px]">
-            <div className="bg-white rounded-[28px] p-[24px]">
-              <h4 className="text-[14px] font-medium text-[#6b6c6c] mb-4">
-                Quick Actions
-              </h4>
-              <button
-                onClick={handleExportCSV}
-                className="w-full text-left px-4 py-[11px] rounded-[12px] bg-[#f3f6f6] hover:bg-[#e8e8ed] text-[#1d1d1f] text-[14px] font-medium transition-all flex justify-between items-center"
-              >
-                <span className="flex items-center gap-2">
-                  <Download size={16} className="text-[#1d1d1f]" />
-                  Export to Excel
-                </span>
-              </button>
-              <p className="text-[12px] text-[#6b6c6c] mt-4 tracking-tight leading-relaxed">
-                Exports currently respect your active filters. To export all
-                time data, ensure the "All Invoices" tab is selected.
-              </p>
-            </div>
-          </motion.div>
         </div>
       </motion.div>
     </div>
